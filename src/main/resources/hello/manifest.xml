@@ -1,14 +1,18 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="0.0.0">
- <names/>
+<package version="0.0.0" uuid="dsnowdon-hello">
+ <names>
+  <name lang="en_US">hello</name>
+ </names>
  <descriptions/>
  <supportedLanguages>
   <language>en_US</language>
  </supportedLanguages>
  <contents>
   <behaviorContent path=".">
-   <nature>interactive</nature>
-   <names/>
+   <nature>solitary</nature>
+   <names>
+    <name lang="en_US">hello</name>
+   </names>
    <descriptions/>
   </behaviorContent>
  </contents>

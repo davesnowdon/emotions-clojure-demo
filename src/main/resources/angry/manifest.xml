@@ -1,15 +1,22 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="0.0.0">
- <names/>
+<package version="0.0.0" uuid="dsnowdon-angry">
+ <names>
+  <name lang="en_US">angry</name>
+ </names>
  <descriptions/>
  <supportedLanguages>
   <language>en_US</language>
  </supportedLanguages>
  <contents>
   <behaviorContent path=".">
-   <nature>interactive</nature>
-   <names/>
+   <nature>solitary</nature>
+   <names>
+    <name lang="en_US">angry</name>
+   </names>
    <descriptions/>
+   <categories>
+    <category>animation</category>
+   </categories>
   </behaviorContent>
  </contents>
 </package>
