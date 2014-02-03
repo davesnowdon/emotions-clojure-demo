@@ -12,6 +12,8 @@
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
 
+(def demo-layer-multipliers {:physical 0.75 :safety 0.5 :social 0.5 :skill 0.25 :contribution 0.25})
+
 (def demo-motivations
   [{:id :phys-anger :name "anger" :layer :physical
     :valence -0.7 :arousal 0.7
@@ -81,6 +83,7 @@
   [percept-chan state-chan]
   (let [initial-sv (motivations->sv demo-motivations)
         layers demo-layers
+        layer-multiplers demo-layer-multipliers
         control-points demo-control-points]
     (go-loop [sv initial-sv
               motivations demo-motivations
@@ -98,10 +101,12 @@
                  timer
                  (let [[new-motivations new-sv]
                        (percepts->motivations+sv layers
+                                                 layer-multiplers
                                                  motivations
                                                  percepts)
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
+;;                   (pprint new-motivations)
                    (>! state-chan {:sv new-sv
                                    :valence valence
                                    :arousal arousal
@@ -129,6 +134,42 @@
                  (println "Percept:" (:name p))))
              (println "--\n")
              (recur (<! display-chan)))))
+
+(defn anger-management
+  [robot state-chan percept-chan]
+  (let [anger-chan (chan)]
+    (go-loop [state (<! state-chan)]
+             (let [anger (get-in state [:sv :phys-anger])]
+               (if (> anger 0.75)
+                 (nao/run-behaviour robot "dsnowdon-angry" anger-chan))
+               (recur (<! state-chan))))
+    (go-loop [done (<! anger-chan)]
+             (do
+               (>! percept-chan
+                   {:name "Got angry" :satisfaction-vector
+                    {:phys-anger -0.5
+                     :saf-bored -0.3
+                     :saf-delight 0.1}})
+               (recur (<! anger-chan))))))
+
+(defn loneliness-management
+  [robot state-chan percept-chan]
+  (let [lonely-chan (chan)]
+    (go-loop [state (<! state-chan)]
+             (let [lonely (get-in state [:sv :soc-lonely])]
+               (if (> lonely 0.75)
+                 (->
+                  (nao/say robot "Is anyone there? I'm feeling lonely.")
+                  (nao/future-callback-wrapper
+                   (nao/callback->channel lonely-chan))))
+               (recur (<! state-chan))))
+    (go-loop [done (<! lonely-chan)]
+             (do
+               (>! percept-chan
+                   {:name "Very lonely" :satisfaction-vector
+                    {:soc-lonely -0.3
+                     :saf-bored 0.1}})
+               (recur (<! lonely-chan))))))
 
 (defn head-touch-process
   [event-chan percept-chan]
@@ -175,10 +216,12 @@
           percept-chan (chan)
           state-chan (chan)
           display-chan (chan)
+          anger-chan (chan)
+          lonely-chan (chan)
           head-chan (chan)
           hand-chan (chan)
           foot-chan (chan)
-          clients-atom (atom [display-chan])]
+          clients-atom (atom [display-chan anger-chan lonely-chan])]
       (nao/say robot "I'm starting to feel quite emotional")
       (let [ev-robot
             (-> robot
@@ -194,6 +237,8 @@
         (head-touch-process head-chan percept-chan)
         (hand-touch-process hand-chan percept-chan)
         (foot-touch-process foot-chan percept-chan)
+        (anger-management robot anger-chan percept-chan)
+        (loneliness-management robot lonely-chan percept-chan)
         (<!! (emotions-process percept-chan state-chan))
         ))))
 
