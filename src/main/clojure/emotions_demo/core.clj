@@ -17,10 +17,10 @@
 (def demo-motivations
   [{:id :phys-anger :name "anger" :layer :physical
     :valence -0.7 :arousal 0.7
-    :desire 0.0 :decay-rate -0.1 :max-delta 1.0}
+    :desire 0.0 :decay-rate -0.05 :max-delta 1.0}
    {:id :phys-hunger :name "hunger" :layer :physical
     :valence 0.0 :arousal 0.5
-    :desire 0.0 :decay-rate 0.1 :max-delta 1.0}
+    :desire 0.0 :decay-rate 0.0 :max-delta 1.0}
    {:id :phys-fear :name "fear" :layer :physical
     :valence -0.9 :arousal 0.2
     :desire 0.0 :decay-rate -0.2 :max-delta 1.0}
@@ -35,7 +35,7 @@
     :desire 0.0 :decay-rate 0.01 :max-delta 0.3}
    {:id :soc-lonely :name "lonely" :layer :social
     :valence -0.6 :arousal -0.6
-    :desire 0.0 :decay-rate 0.1 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.05 :max-delta 0.3}
    ])
 
 (def demo-control-points
@@ -106,7 +106,7 @@
                                                  percepts)
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
-;;                   (pprint new-motivations)
+                   (pprint new-motivations)
                    (>! state-chan {:sv new-sv
                                    :valence valence
                                    :arousal arousal
@@ -135,41 +135,82 @@
              (println "--\n")
              (recur (<! display-chan)))))
 
+(defn reaction-process
+  "Triggers a reaction and the resulting percept when a predicate is met"
+  [robot percept-chan predicate reaction percept]
+  (let [state-chan (chan)
+        reaction-complete-chan (chan)]
+    (go (while true
+          (let [state (<! state-chan)]
+            (if (predicate state)
+              (reaction robot reaction-complete-chan)))))
+    (go (while true
+          (let [done (<! reaction-complete-chan)]
+            (>! percept-chan (percept done)))))
+    state-chan))
+
+(defn react-angrily?
+  [state]
+  (> (get-in state [:sv :phys-anger] 0.0) 0.75))
+
+(defn anger-reaction
+  [robot complete-chan]
+  (nao/run-behaviour robot "dsnowdon-angry" complete-chan))
+
+(defn anger-reaction-percept
+  [done-signal]
+  {:name "Got angry" :satisfaction-vector
+   {:phys-anger -0.5
+    :saf-bored -0.3}})
+
 (defn anger-management
-  [robot state-chan percept-chan]
-  (let [anger-chan (chan)]
-    (go-loop [state (<! state-chan)]
-             (let [anger (get-in state [:sv :phys-anger])]
-               (if (> anger 0.75)
-                 (nao/run-behaviour robot "dsnowdon-angry" anger-chan))
-               (recur (<! state-chan))))
-    (go-loop [done (<! anger-chan)]
-             (do
-               (>! percept-chan
-                   {:name "Got angry" :satisfaction-vector
-                    {:phys-anger -0.5
-                     :saf-bored -0.3
-                     :saf-delight 0.1}})
-               (recur (<! anger-chan))))))
+  [robot percept-chan]
+  (reaction-process robot percept-chan
+                    react-angrily? anger-reaction anger-reaction-percept))
+
+(defn react-lonely?
+  [state]
+  (> (get-in state [:sv :soc-lonely] 0.0) 0.5))
+
+(defn lonely-reaction
+  [robot complete-chan]
+  (->
+   (nao/say robot "Is anyone there? I'm feeling lonely.")
+   (nao/future-callback-wrapper
+    (nao/callback->channel complete-chan))))
+
+(defn lonely-reaction-percept
+  [done-signal]
+  {:name "Very lonely" :satisfaction-vector
+   {:soc-lonely -0.4
+    :saf-bored 0.1}})
 
 (defn loneliness-management
-  [robot state-chan percept-chan]
-  (let [lonely-chan (chan)]
-    (go-loop [state (<! state-chan)]
-             (let [lonely (get-in state [:sv :soc-lonely])]
-               (if (> lonely 0.75)
-                 (->
-                  (nao/say robot "Is anyone there? I'm feeling lonely.")
-                  (nao/future-callback-wrapper
-                   (nao/callback->channel lonely-chan))))
-               (recur (<! state-chan))))
-    (go-loop [done (<! lonely-chan)]
-             (do
-               (>! percept-chan
-                   {:name "Very lonely" :satisfaction-vector
-                    {:soc-lonely -0.3
-                     :saf-bored 0.1}})
-               (recur (<! lonely-chan))))))
+  [robot percept-chan]
+  (reaction-process robot percept-chan
+                    react-lonely? lonely-reaction lonely-reaction-percept))
+
+(defn react-bored?
+  [state]
+  (> (get-in state [:sv :saf-bored] 0.0) 0.75))
+
+(defn bored-reaction
+  [robot complete-chan]
+  (->
+   (nao/say robot "Ho hum! I'm bored.")
+   (nao/future-callback-wrapper
+    (nao/callback->channel complete-chan))))
+
+(defn bored-reaction-percept
+  [done-signal]
+  {:name "Bored" :satisfaction-vector
+   {:soc-lonely 0.05
+    :saf-bored -0.1}})
+
+(defn boredom-management
+  [robot percept-chan]
+  (reaction-process robot percept-chan
+                    react-bored? bored-reaction bored-reaction-percept))
 
 (defn head-touch-process
   [event-chan percept-chan]
@@ -179,8 +220,7 @@
                (>! percept-chan
                    {:name "Head touched" :satisfaction-vector
                     {:phys-anger 0.2
-                     :saf-bored -0.3
-                     :saf-delight 0.1}}))
+                     :saf-bored -0.3}}))
              (recur (<! event-chan)))))
 
 (defn hand-touch-process
@@ -192,7 +232,6 @@
                    {:name "Hand touched" :satisfaction-vector
                     {:phys-anger -0.2
                      :saf-bored -0.1
-                     :saf-delight -0.1
                      :soc-lonely -0.3}}))
              (recur (<! event-chan)))))
 
@@ -208,6 +247,10 @@
                      :saf-playful 0.2}}))
              (recur (<! event-chan)))))
 
+(defn add-state-listener
+  [clients-atom listener-chan]
+  (swap! clients-atom conj listener-chan))
+
 (defn run-demo
   [hostname]
   (do
@@ -216,12 +259,10 @@
           percept-chan (chan)
           state-chan (chan)
           display-chan (chan)
-          anger-chan (chan)
-          lonely-chan (chan)
           head-chan (chan)
           hand-chan (chan)
           foot-chan (chan)
-          clients-atom (atom [display-chan anger-chan lonely-chan])]
+          clients-atom (atom [display-chan])]
       (nao/say robot "I'm starting to feel quite emotional")
       (let [ev-robot
             (-> robot
@@ -237,8 +278,12 @@
         (head-touch-process head-chan percept-chan)
         (hand-touch-process hand-chan percept-chan)
         (foot-touch-process foot-chan percept-chan)
-        (anger-management robot anger-chan percept-chan)
-        (loneliness-management robot lonely-chan percept-chan)
+        (add-state-listener clients-atom
+                            (anger-management robot percept-chan))
+        (add-state-listener clients-atom
+                            (loneliness-management robot percept-chan))
+        (add-state-listener clients-atom
+                            (boredom-management robot percept-chan))
         (<!! (emotions-process percept-chan state-chan))
         ))))
 
