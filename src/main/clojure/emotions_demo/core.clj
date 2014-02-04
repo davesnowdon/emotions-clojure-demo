@@ -7,17 +7,18 @@
             [emotions.core :refer :all]
             [emotions.util :refer [float=]]))
 
-(def model-update-ms 5000)
+(def model-update-ms 2000)
 
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
 
-(def demo-layer-multipliers {:physical 0.75 :safety 0.5 :social 0.5 :skill 0.25 :contribution 0.25})
+(def demo-layer-multipliers
+  {:physical 0.75 :safety 0.5 :social 0.4 :skill 0.25 :contribution 0.25})
 
 (def demo-motivations
   [{:id :phys-anger :name "anger" :layer :physical
     :valence -0.7 :arousal 0.7
-    :desire 0.0 :decay-rate -0.05 :max-delta 1.0}
+    :desire 0.0 :decay-rate -0.02 :max-delta 1.0}
    {:id :phys-hunger :name "hunger" :layer :physical
     :valence 0.0 :arousal 0.5
     :desire 0.0 :decay-rate 0.0 :max-delta 1.0}
@@ -26,7 +27,7 @@
     :desire 0.0 :decay-rate -0.2 :max-delta 1.0}
    {:id :saf-bored :name "bored" :layer :safety
     :valence -0.1 :arousal -0.4
-    :desire 0.0 :decay-rate 0.1 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.02 :max-delta 0.3}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
     :desire 0.0 :decay-rate 0.0 :max-delta 0.8}
@@ -35,36 +36,36 @@
     :desire 0.0 :decay-rate 0.01 :max-delta 0.3}
    {:id :soc-lonely :name "lonely" :layer :social
     :valence -0.6 :arousal -0.6
-    :desire 0.0 :decay-rate 0.05 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.01 :max-delta 0.3}
    ])
 
 (def demo-control-points
   [{:valence -1.0 :arousal 1.0 :expression-vector
-    {:phys-hunger 0.5 :phys-fear 0.8 :saf-bored 0.0 :saf-delight 0.0 :soc-lonely 0.2}}
+    {:phys-anger 0.7 :phys-fear 0.8}}
 
    {:valence 0.0 :arousal 1.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0  :saf-bored 0.5 :saf-delight 0.8 :soc-lonely 0.0}}
+    {:phys-hunger 0.5 :saf-playful 0.9}}
 
    {:valence 1.0 :arousal 1.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0 :saf-bored 0.0 :saf-delight 0.9 :soc-lonely 0.0}}
+    {:saf-delight 0.7 :saf-playful 0.7}}
 
    {:valence -1.0 :arousal 0.0 :expression-vector
-    {:phys-hunger 0.1 :phys-fear 0.5 :saf-bored 0.3 :saf-delight 0.0 :soc-lonely 0.1}}
+    {:phys-fear 0.9}}
 
    {:valence 0.0 :arousal 0.0 :expression-vector
-    {:phys-hunger 0.5 :phys-fear 0.1 :saf-bored 0.8 :saf-delight 0.0 :soc-lonely 0.3}}
+    {:saf-bored 0.5}}
 
    {:valence 1.0 :arousal 0.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0 :saf-bored 0.0 :saf-delight 0.5 :soc-lonely 0.0}}
+    {:saf-delight 0.9}}
 
    {:valence -1.0 :arousal -1.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0 :saf-bored 0.3 :saf-delight 0.0 :soc-lonely 0.0}}
+    {:soc-lonely 0.6}}
 
    {:valence 0.0 :arousal -1.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0 :saf-bored 0.0 :saf-delight 0.0 :soc-lonely 0.0}}
+    {:saf-bored 0.5}}
 
    {:valence 1.0 :arousal -1.0 :expression-vector
-    {:phys-hunger 0.0 :phys-fear 0.0 :saf-bored 0.0 :saf-delight 0.0 :soc-lonely 0.0}}
+    {}}
    ])
 
 ;; TODO percepts
