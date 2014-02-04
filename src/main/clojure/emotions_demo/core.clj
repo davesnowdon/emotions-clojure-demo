@@ -156,7 +156,9 @@
 
 (defn anger-reaction
   [robot state complete-chan]
-  (nao/run-behaviour robot "dsnowdon-angry" complete-chan))
+  (if (> (rand) 0.5)
+    (nao/run-behaviour robot "dsnowdon-angry" complete-chan)
+    (nao/run-behaviour robot "dsnowdon-exterminate" complete-chan)))
 
 (defn anger-reaction-percept
   [done-signal]
