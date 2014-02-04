@@ -9,9 +9,14 @@
  </supportedLanguages>
  <contents>
   <behaviorContent path=".">
-   <nature>interactive</nature>
-   <names/>
+   <nature>solitary</nature>
+   <names>
+    <name lang="en_US">happy</name>
+   </names>
    <descriptions/>
+   <categories>
+    <category>animation</category>
+   </categories>
   </behaviorContent>
  </contents>
 </package>
