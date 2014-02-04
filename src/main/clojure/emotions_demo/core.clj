@@ -210,6 +210,46 @@
    {:soc-lonely 0.05
     :saf-bored -0.1}})
 
+(defn react-scared?
+  [state]
+  (> (get-in state [:sv :phys-fear] 0.0) 0.6))
+
+(defn fear-reaction
+  [robot state complete-chan]
+  (nao/run-behaviour robot "dsnowdon-scared" complete-chan))
+
+(defn fear-reaction-percept
+  [done-signal]
+  {:name "Got scared" :satisfaction-vector
+   {:phys-fear -0.2
+    :saf-bored -0.5}})
+
+(defn fear-management
+  [robot percept-chan]
+  (reaction-process robot percept-chan
+                    react-scared? fear-reaction fear-reaction-percept))
+
+(defn react-happy?
+  [state]
+  (or
+   (> (get-in state [:sv :saf-delight] 0.0) 0.5)
+   (> (get-in state [:sv :saf-playful] 0.0) 0.5)))
+
+(defn delight-reaction
+  [robot state complete-chan]
+  (nao/run-behaviour robot "dsnowdon-happy" complete-chan))
+
+(defn delight-reaction-percept
+  [done-signal]
+  {:name "Happy & Playful" :satisfaction-vector
+   {:saf-delight -0.4
+    :saf-playful -0.4}})
+
+(defn delight-management
+  [robot percept-chan]
+  (reaction-process robot percept-chan
+                    react-happy? delight-reaction delight-reaction-percept))
+
 (defn boredom-management
   [robot percept-chan]
   (reaction-process robot percept-chan
@@ -226,6 +266,17 @@
                      :saf-bored -0.3}}))
              (recur (<! event-chan)))))
 
+(defn back-head-touch-process
+  [event-chan percept-chan]
+  (go-loop [[event value] (<! event-chan)]
+           (do
+             (if (float= 1.0 value)
+               (>! percept-chan
+                   {:name "Back Head touched" :satisfaction-vector
+                    {:phys-fear 1.0
+                     :saf-bored -0.3}}))
+             (recur (<! event-chan)))))
+
 (defn hand-touch-process
   [event-chan percept-chan]
   (go-loop [[event value] (<! event-chan)]
@@ -234,7 +285,7 @@
                (>! percept-chan
                    {:name "Hand touched" :satisfaction-vector
                     {:phys-anger -0.2
-                     :saf-bored -0.1
+                     :saf-bored -0.2
                      :soc-lonely -0.3}}))
              (recur (<! event-chan)))))
 
@@ -246,9 +297,15 @@
                (>! percept-chan
                    {:name "Foot touched" :satisfaction-vector
                     {:phys-anger -0.1
-                     :saf-bored -0.1
+                     :saf-bored -0.2
                      :saf-playful 0.2}}))
              (recur (<! event-chan)))))
+
+(defn face-detected-process
+  [event-chan percept-chan]
+  (go (while true
+        (let [[event value] (<! event-chan)]
+          (println "Face" value)))))
 
 (defn add-state-listener
   [clients-atom listener-chan]
@@ -263,8 +320,10 @@
           state-chan (chan)
           display-chan (chan)
           head-chan (chan)
+          back-head-chan (chan)
           hand-chan (chan)
           foot-chan (chan)
+          face-chan (chan)
           clients-atom (atom [display-chan])]
       (nao/set-volume robot (Float. 1.0))
       (nao/say robot "I'm starting to feel quite emotional")
@@ -272,22 +331,29 @@
             (-> robot
                 (nao/add-event-chan "FrontTactilTouched" head-chan)
                 (nao/add-event-chan "MiddleTactilTouched" head-chan)
-                (nao/add-event-chan "RearTactilTouched" head-chan)
+                (nao/add-event-chan "RearTactilTouched" back-head-chan)
                 (nao/add-event-chan "HandLeftBackTouched" hand-chan)
                 (nao/add-event-chan "HandRightBackTouched" hand-chan)
                 (nao/add-event-chan "LeftBumperPressed" foot-chan)
-                (nao/add-event-chan "RightBumperPressed" foot-chan))]
+                (nao/add-event-chan "RightBumperPressed" foot-chan)
+                (nao/add-event-chan "FaceDetected" face-chan))]
         (state-emitter state-chan clients-atom)
         (state-display display-chan)
         (head-touch-process head-chan percept-chan)
+        (back-head-touch-process back-head-chan percept-chan)
         (hand-touch-process hand-chan percept-chan)
         (foot-touch-process foot-chan percept-chan)
+        (face-detected-process face-chan percept-chan)
         (add-state-listener clients-atom
-                            (anger-management robot percept-chan))
+                            (anger-management ev-robot percept-chan))
         (add-state-listener clients-atom
-                            (loneliness-management robot percept-chan))
+                            (loneliness-management ev-robot percept-chan))
         (add-state-listener clients-atom
-                            (boredom-management robot percept-chan))
+                            (boredom-management ev-robot percept-chan))
+        (add-state-listener clients-atom
+                            (fear-management ev-robot percept-chan))
+        (add-state-listener clients-atom
+                            (delight-management ev-robot percept-chan))
         (<!! (emotions-process percept-chan state-chan))
         ))))
 
