@@ -107,7 +107,7 @@
                                                  percepts)
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
-                   (pprint new-motivations)
+;;                   (pprint new-motivations)
                    (>! state-chan {:sv new-sv
                                    :valence valence
                                    :arousal arousal
