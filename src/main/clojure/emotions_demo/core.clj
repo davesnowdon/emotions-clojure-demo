@@ -143,7 +143,7 @@
     (go (while true
           (let [state (<! state-chan)]
             (if (predicate state)
-              (reaction robot reaction-complete-chan)))))
+              (reaction robot state reaction-complete-chan)))))
     (go (while true
           (let [done (<! reaction-complete-chan)]
             (>! percept-chan (percept done)))))
@@ -154,7 +154,7 @@
   (> (get-in state [:sv :phys-anger] 0.0) 0.75))
 
 (defn anger-reaction
-  [robot complete-chan]
+  [robot state complete-chan]
   (nao/run-behaviour robot "dsnowdon-angry" complete-chan))
 
 (defn anger-reaction-percept
@@ -173,7 +173,7 @@
   (> (get-in state [:sv :soc-lonely] 0.0) 0.5))
 
 (defn lonely-reaction
-  [robot complete-chan]
+  [robot state complete-chan]
   (->
    (nao/say robot "Is anyone there? I'm feeling lonely.")
    (nao/future-callback-wrapper
@@ -195,11 +195,13 @@
   (> (get-in state [:sv :saf-bored] 0.0) 0.75))
 
 (defn bored-reaction
-  [robot complete-chan]
-  (->
-   (nao/say robot "Ho hum! I'm bored.")
-   (nao/future-callback-wrapper
-    (nao/callback->channel complete-chan))))
+  [robot state complete-chan]
+  (if (> (rand) 0.5)
+    (->
+     (nao/say robot "Ho hum! I'm bored.")
+     (nao/future-callback-wrapper
+      (nao/callback->channel complete-chan)))
+    (nao/run-behaviour robot "dsnowdon-hello" complete-chan)))
 
 (defn bored-reaction-percept
   [done-signal]
@@ -263,6 +265,7 @@
           hand-chan (chan)
           foot-chan (chan)
           clients-atom (atom [display-chan])]
+      (nao/set-volume robot (Float. 1.0))
       (nao/say robot "I'm starting to feel quite emotional")
       (let [ev-robot
             (-> robot
