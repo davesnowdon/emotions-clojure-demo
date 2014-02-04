@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<package version="0.0.0" uuid="dsnowdon-exterminate">
+ <names>
+  <name lang="en_US">exterminate</name>
+ </names>
+ <descriptions/>
+ <supportedLanguages>
+  <language>en_US</language>
+ </supportedLanguages>
+ <contents>
+  <behaviorContent path=".">
+   <nature>solitary</nature>
+   <names>
+    <name lang="en_US">exterminate</name>
+   </names>
+   <descriptions/>
+   <categories>
+    <category>animation</category>
+   </categories>
+  </behaviorContent>
+ </contents>
+</package>
