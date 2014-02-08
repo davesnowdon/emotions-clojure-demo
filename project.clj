@@ -1,4 +1,4 @@
-(defproject emotions-demo "0.1.0-SNAPSHOT"
+(defproject emotions-demo "0.1.0"
   :description "Demonstrate use of core.aync and emotions framework with NAO robot"
   :url "https://github.com/davesnowdon/emotions-clojure-demo"
   :license {:name "Eclipse Public License"
