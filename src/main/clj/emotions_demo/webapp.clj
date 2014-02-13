@@ -20,7 +20,7 @@
       (include-js "//fb.me/react-0.8.0.js") ; only required in dev build
       (include-js "/out/goog/base.js") ; only required in dev build
       (include-js "/js/demo.js")
-      (javascript-tag "goog.require('demo.client');") ; only required in dev build
+      (javascript-tag "goog.require('emotions_demo.client');") ; only required in dev build
       ]))
 
 (defn ws-handler [req]

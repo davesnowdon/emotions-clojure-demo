@@ -10,6 +10,11 @@
   :test-paths ["test" "src/test/clj"]
 
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 [compojure "1.1.6"]
+                 [jarohen/chord "0.2.2"]
+                 [ring/ring-core "1.2.1"]
+                 [javax.servlet/servlet-api "2.5"]
+                 [hiccup "1.0.5"]
                  [emotions "0.1.3"]
                  [naojure "0.2.2"]
 
@@ -17,6 +22,7 @@
                  [org.clojure/tools.reader "0.8.3"]
                  [prismatic/dommy "0.1.2"]
                  [om "0.3.6"]]
+
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.0.2"]
             [jarohen/lein-frodo "0.2.11"]]
