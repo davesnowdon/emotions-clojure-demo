@@ -358,7 +358,3 @@
                             (delight-management ev-robot percept-chan))
         (<!! (emotions-process percept-chan state-chan))
         ))))
-
-(defn -main
-  [& args]
-  (run-demo (first args)))

@@ -1,4 +1,4 @@
 {:frodo/config {:web {:port 3000
-                      :handler-fn emotions-demo.core/webapp}
+                      :handler-fn emotions-demo.webapp/webapp}
                 :nrepl {:port 7888
                         :cljs-repl? true}}}

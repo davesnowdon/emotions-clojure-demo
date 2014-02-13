@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :main emotions-demo.core
+  :main emotions-demo.main
 
   :source-paths ["src" "src/main/clj"]
   :test-paths ["test" "src/test/clj"]
