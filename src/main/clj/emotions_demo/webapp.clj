@@ -3,6 +3,8 @@
              :refer [<! >! <!! timeout chan alt! put! go go-loop]]
             [ring.util.response :refer [response]]
             [chord.http-kit :refer [with-channel]]
+            [nomad :refer [defconfig]]
+            [clojure.java.io :as io]
             [compojure.core :refer [defroutes GET routes]]
             [compojure.handler :refer [api]]
             [compojure.route :refer [resources]]
@@ -10,6 +12,7 @@
             [hiccup.element :refer [javascript-tag]]
             [emotions-demo.core :refer :all]))
 
+(defconfig my-config (io/resource "config/demo.edn"))
 
 (defn index-page []
   (html5
