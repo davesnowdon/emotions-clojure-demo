@@ -12,6 +12,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [compojure "1.1.6"]
                  [jarohen/chord "0.2.2"]
+                 [jarohen/nomad "0.6.2"]
                  [ring/ring-core "1.2.1"]
                  [javax.servlet/servlet-api "2.5"]
                  [hiccup "1.0.5"]
@@ -21,7 +22,7 @@
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/tools.reader "0.8.3"]
                  [prismatic/dommy "0.1.2"]
-                 [om "0.3.6"]]
+                 [om "0.4.0"]]
 
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.0.2"]

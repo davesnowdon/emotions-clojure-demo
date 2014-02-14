@@ -1,4 +1,8 @@
 {:frodo/config {:web {:port 3000
                       :handler-fn emotions-demo.webapp/webapp}
                 :nrepl {:port 7888
-                        :cljs-repl? true}}}
+                        :cljs-repl? true}}
+ :nomad/environments {"home"
+                      {:robot-hostname "192.168.0.71"}
+                      "mobile"
+                      {:robot-hostname "192.168.43.250"}}}
