@@ -9,6 +9,10 @@
 
 (def model-update-ms 2000)
 
+(def internal-clients-atom (atom []))
+
+(def remote-clients-atom (atom []))
+
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
 
@@ -121,6 +125,14 @@
            (when state
              (doseq [client-chan @clients-atom]
                (>! client-chan state))
+             (recur (<! state-chan)))))
+
+(defn remote-state-emitter
+  [state-chan clients-atom]
+  (go-loop [state (<! state-chan)]
+           (when state
+             (doseq [client-chan @clients-atom]
+               (>! client-chan (pr-str state)))
              (recur (<! state-chan)))))
 
 (defn state-display
@@ -313,48 +325,59 @@
   [clients-atom listener-chan]
   (swap! clients-atom conj listener-chan))
 
-(defn run-demo
-  [hostname]
+(defn start-robot
+  [hostname percept-chan state-chan]
   (do
     (println "Connecting to" hostname)
-    (let [robot (nao/make-robot hostname 9559 [:motion :tts])
-          percept-chan (chan)
-          state-chan (chan)
-          display-chan (chan)
-          head-chan (chan)
+    (let [head-chan (chan)
           back-head-chan (chan)
           hand-chan (chan)
           foot-chan (chan)
           face-chan (chan)
-          clients-atom (atom [display-chan])]
+          robot
+          (-> (nao/make-robot hostname 9559 [:motion :tts])
+              (nao/add-event-chan "FrontTactilTouched" head-chan)
+              (nao/add-event-chan "MiddleTactilTouched" head-chan)
+              (nao/add-event-chan "RearTactilTouched" back-head-chan)
+              (nao/add-event-chan "HandLeftBackTouched" hand-chan)
+              (nao/add-event-chan "HandRightBackTouched" hand-chan)
+              (nao/add-event-chan "LeftBumperPressed" foot-chan)
+              (nao/add-event-chan "RightBumperPressed" foot-chan)
+              (nao/add-event-chan "FaceDetected" face-chan))]
       (nao/set-volume robot (Float. 1.0))
       (nao/say robot "I'm starting to feel quite emotional")
-      (let [ev-robot
-            (-> robot
-                (nao/add-event-chan "FrontTactilTouched" head-chan)
-                (nao/add-event-chan "MiddleTactilTouched" head-chan)
-                (nao/add-event-chan "RearTactilTouched" back-head-chan)
-                (nao/add-event-chan "HandLeftBackTouched" hand-chan)
-                (nao/add-event-chan "HandRightBackTouched" hand-chan)
-                (nao/add-event-chan "LeftBumperPressed" foot-chan)
-                (nao/add-event-chan "RightBumperPressed" foot-chan)
-                (nao/add-event-chan "FaceDetected" face-chan))]
-        (state-emitter state-chan clients-atom)
-        (state-display display-chan)
-        (head-touch-process head-chan percept-chan)
-        (back-head-touch-process back-head-chan percept-chan)
-        (hand-touch-process hand-chan percept-chan)
-        (foot-touch-process foot-chan percept-chan)
-        (face-detected-process face-chan percept-chan)
-        (add-state-listener clients-atom
-                            (anger-management ev-robot percept-chan))
-        (add-state-listener clients-atom
-                            (loneliness-management ev-robot percept-chan))
-        (add-state-listener clients-atom
-                            (boredom-management ev-robot percept-chan))
-        (add-state-listener clients-atom
-                            (fear-management ev-robot percept-chan))
-        (add-state-listener clients-atom
-                            (delight-management ev-robot percept-chan))
-        (<!! (emotions-process percept-chan state-chan))
-        ))))
+      (head-touch-process head-chan percept-chan)
+      (back-head-touch-process back-head-chan percept-chan)
+      (hand-touch-process hand-chan percept-chan)
+      (foot-touch-process foot-chan percept-chan)
+      (face-detected-process face-chan percept-chan)
+      (add-state-listener internal-clients-atom
+                          (anger-management robot percept-chan))
+      (add-state-listener internal-clients-atom
+                          (loneliness-management robot percept-chan))
+      (add-state-listener internal-clients-atom
+                          (boredom-management robot percept-chan))
+      (add-state-listener internal-clients-atom
+                          (fear-management robot percept-chan))
+      (add-state-listener internal-clients-atom
+                          (delight-management robot percept-chan))
+      )))
+
+(defn start-emotions
+  [percept-chan state-chan]
+  (let [remote-state-chan (chan)
+        display-chan (chan)]
+    (state-emitter state-chan internal-clients-atom)
+    (remote-state-emitter remote-state-chan remote-clients-atom)
+    (state-display display-chan)
+    (add-state-listener internal-clients-atom display-chan)
+    (add-state-listener internal-clients-atom remote-state-chan)
+    (<!! (emotions-process percept-chan state-chan))
+    ))
+
+(defn run-demo-with-robot
+  [hostname]
+  (let [percept-chan (chan)
+        state-chan (chan)]
+    (start-robot hostname percept-chan state-chan)
+    (start-emotions percept-chan state-chan)))

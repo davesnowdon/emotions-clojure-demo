@@ -10,5 +10,5 @@
 (defn -main
   [& args]
   (if-let [hostname (first args)]
-    (run-demo hostname)
-    (run-demo (:robot-hostname (my-config)))))
+    (run-demo-with-robot hostname)
+    (run-demo-with-robot (:robot-hostname (my-config)))))
