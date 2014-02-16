@@ -14,13 +14,21 @@
 
 (defconfig my-config (io/resource "config/demo.edn"))
 
-(def remote-clients-atom (atom []))
+(def remote-clients-atom (atom {}))
+
+(def next-id!
+  (let [counter (java.util.concurrent.atomic.AtomicLong.)]
+    (fn [] (.incrementAndGet counter))))
+
+(defn add-client
+  [clients-atom client-id listener-chan]
+  (swap! clients-atom assoc client-id listener-chan))
 
 (defn remote-state-emitter
   [state-chan clients-atom]
   (go-loop [state (<! state-chan)]
            (when state
-             (doseq [client-chan @clients-atom]
+             (doseq [[client-id client-chan] @clients-atom]
                (>! client-chan (pr-str state)))
              (recur (<! state-chan)))))
 
@@ -39,6 +47,8 @@
 (defn ws-handler [req]
   (with-channel req ws
     (println "Opened connection from" (:remote-addr req))
+    (let [client-id (next-id!)]
+      (add-client remote-clients-atom client-id ws))
     (go-loop []
       (when-let [{:keys [message]} (<! ws)]
         (println "Message received:" message)
@@ -54,8 +64,11 @@
     ))
 
 (defn webapp []
-  (let [remote-state-chan (chan)]
+  (let [percept-chan (chan)
+        state-chan (chan)
+        remote-state-chan (chan)]
     (add-state-listener internal-clients-atom remote-state-chan)
     (remote-state-emitter remote-state-chan remote-clients-atom)
+    (start-emotions percept-chan state-chan)
     (-> (app-routes)
         api)))

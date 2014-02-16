@@ -39,6 +39,7 @@
 (defn bind-msgs [{:keys [ws messages]}]
   (go-loop []
     (when-let [msg (<! ws)]
+      (js/alert msg)
       (om/update! messages conj msg)
       (recur))))
 

@@ -359,12 +359,11 @@
     (state-emitter state-chan internal-clients-atom)
     (state-display display-chan)
     (add-state-listener internal-clients-atom display-chan)
-    (<!! (emotions-process percept-chan state-chan))
-    ))
+    (emotions-process percept-chan state-chan)))
 
 (defn run-demo-with-robot
   [hostname]
   (let [percept-chan (chan)
         state-chan (chan)]
     (start-robot hostname percept-chan state-chan)
-    (start-emotions percept-chan state-chan)))
+    (<!! (start-emotions percept-chan state-chan))))
