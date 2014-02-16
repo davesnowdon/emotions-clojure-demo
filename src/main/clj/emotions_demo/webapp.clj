@@ -14,6 +14,16 @@
 
 (defconfig my-config (io/resource "config/demo.edn"))
 
+(def remote-clients-atom (atom []))
+
+(defn remote-state-emitter
+  [state-chan clients-atom]
+  (go-loop [state (<! state-chan)]
+           (when state
+             (doseq [client-chan @clients-atom]
+               (>! client-chan (pr-str state)))
+             (recur (<! state-chan)))))
+
 (defn index-page []
   (html5
    [:head
@@ -44,5 +54,8 @@
     ))
 
 (defn webapp []
-  (-> (app-routes)
-      api))
+  (let [remote-state-chan (chan)]
+    (add-state-listener internal-clients-atom remote-state-chan)
+    (remote-state-emitter remote-state-chan remote-clients-atom)
+    (-> (app-routes)
+        api)))

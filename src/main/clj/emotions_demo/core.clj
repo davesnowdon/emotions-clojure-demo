@@ -11,8 +11,6 @@
 
 (def internal-clients-atom (atom []))
 
-(def remote-clients-atom (atom []))
-
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
 
@@ -125,14 +123,6 @@
            (when state
              (doseq [client-chan @clients-atom]
                (>! client-chan state))
-             (recur (<! state-chan)))))
-
-(defn remote-state-emitter
-  [state-chan clients-atom]
-  (go-loop [state (<! state-chan)]
-           (when state
-             (doseq [client-chan @clients-atom]
-               (>! client-chan (pr-str state)))
              (recur (<! state-chan)))))
 
 (defn state-display
@@ -365,13 +355,10 @@
 
 (defn start-emotions
   [percept-chan state-chan]
-  (let [remote-state-chan (chan)
-        display-chan (chan)]
+  (let [display-chan (chan)]
     (state-emitter state-chan internal-clients-atom)
-    (remote-state-emitter remote-state-chan remote-clients-atom)
     (state-display display-chan)
     (add-state-listener internal-clients-atom display-chan)
-    (add-state-listener internal-clients-atom remote-state-chan)
     (<!! (emotions-process percept-chan state-chan))
     ))
 
