@@ -113,7 +113,8 @@
                    (>! state-chan {:sv new-sv
                                    :valence valence
                                    :arousal arousal
-                                   :percepts percepts})
+                                   :percepts percepts
+                                   :motivations new-motivations})
                    (recur new-sv new-motivations []
                           (timeout (long model-update-ms)))))))))
 
