@@ -19,7 +19,10 @@
   [{:keys [history] :as old-state}
    {:keys [sv valence arousal percepts motivations]}]
   (let [cur-state (-> sv (assoc :valence valence) (assoc :arousal arousal))]
-    {:motivations motivations :cur-state cur-state :history {}}
+    {:motivations motivations
+     :cur-state cur-state
+     :history
+     (reduce (fn [a k] (assoc a k (conj (k history []) (k cur-state)))) {} (keys cur-state))}
     ))
 
 (defn bind-state [{:keys [ws data]}]
@@ -32,19 +35,29 @@
                                      (reader/read-string update))))
       (recur))))
 
+(defn single-value [{:keys [data] :as c} owner
+                    {:keys [label path] :as opts}]
+  (reify
+    om/IRender
+    (render [_]
+      (let [value (get-in data path)]
+        (dom/div #js {:className "single_value"}
+                 (dom/span #js {:className "label"} label)
+                 (dom/span #js {:className "value"} value))))))
+
 (defn valence-arousal [{:keys [data] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (let [valence (get-in data [:cur-state :valence])
-            arousal (get-in data [:cur-state :arousal])]
-        (dom/div #js {:className "valence_arousal"}
-                 (dom/div nil
-                          (dom/span nil "Valence")
-                          (dom/span nil valence))
-                 (dom/div nil
-                          (dom/span nil "Arousal")
-                          (dom/span nil arousal)))))))
+      (dom/div #js {:className "valence_arousal"}
+               (om/build single-value c
+                         {:opts
+                          {:label "Valence"
+                           :path [:cur-state :valence]}})
+               (om/build single-value c
+                         {:opts
+                          {:label "Arousal"
+                           :path [:cur-state :arousal]}})))))
 
 (defn satisfaction-vector [app owner opts]
   (reify
@@ -60,12 +73,13 @@
       (dom/div #js {:className "motivations"}
                (dom/span nil "motivations")))))
 
-(defn history [app owner opts]
+(defn history [{:keys [data] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (dom/div #js {:className "history"}
-               (dom/span nil "history")))))
+      (let [history (:history data)]
+        (dom/div #js {:className "history"}
+                 (dom/span nil "history"))))))
 
 
 (defn emotion-display-app [app owner]
