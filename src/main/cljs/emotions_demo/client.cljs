@@ -59,12 +59,16 @@
                           {:label "Arousal"
                            :path [:cur-state :arousal]}})))))
 
-(defn satisfaction-vector [app owner opts]
+(defn satisfaction-vector [{:keys [data] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "satisfaction_vector"}
-               (dom/span nil "Satisfaction vector")))))
+               (dom/h2 nil "Satisfaction vector")
+               (dom/div #js {:className "contents"}
+                        (om/build-all sv-value
+                                      (:motivations data)
+                                      {:key :id}))))))
 
 (defn motivations [app owner opts]
   (reify
