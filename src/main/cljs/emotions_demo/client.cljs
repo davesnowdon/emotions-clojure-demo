@@ -59,16 +59,29 @@
                           {:label "Arousal"
                            :path [:cur-state :arousal]}})))))
 
+(defn sv-value [{:keys [id name value] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (let []
+        (om/build single-value c
+                         {:opts
+                          {:label name
+                           :path [:id]}})))))
+
 (defn satisfaction-vector [{:keys [data] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (dom/div #js {:className "satisfaction_vector"}
-               (dom/h2 nil "Satisfaction vector")
-               (dom/div #js {:className "contents"}
-                        (om/build-all sv-value
-                                      (:motivations data)
-                                      {:key :id}))))))
+      (let [motivations (:motivations data)
+            cur-state (:cur-state data)
+            ids (map :id motivations)
+            names (reduce {} (fn [a m] (assoc a (:id m) (:name m))) motivations)
+            mvalues (map (fn [id] {:id id :name (names id) :value (cur-state id)}) ids)]
+        (dom/div #js {:className "satisfaction_vector"}
+                 (dom/h2 nil "Satisfaction vector")
+                 (dom/div #js {:className "contents"}
+                          (om/build-all sv-value mvalues {:key :id})))))))
 
 (defn motivations [app owner opts]
   (reify
