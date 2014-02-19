@@ -15,73 +15,69 @@
   (om/component
     (dom/li nil message)))
 
-(defn update-state
-  [{:keys [history] :as old-state}
-   {:keys [sv valence arousal percepts motivations]}]
-  (let [cur-state (-> sv (assoc :valence valence) (assoc :arousal arousal))]
-    {:motivations motivations
-     :cur-state cur-state
-     :history
-     (reduce (fn [a k] (assoc a k (conj (k history []) (k cur-state)))) {} (keys cur-state))}
-    ))
+(defn- motivations->id+name [motivations]
+  (reduce (fn [a m] (assoc a (:id m) (:name m))) {} motivations))
 
-(defn bind-state [{:keys [ws data]}]
+(defn- sv->values [sv motivations]
+  (let [ids (map :id motivations)
+        mnames (motivations->id+name motivations)]
+    (map (fn [id] {:id id :name (mnames id) :value (sv id)}) ids)))
+
+(defn add-history [history new-state]
+  (reduce (fn [a k] (assoc a k (conj (k history []) (k new-state)))) {}
+          (keys new-state)))
+
+; this seems to change the state to not be a cursor
+(defn make-new-state
+  [{:keys [ws sv-history va-history] :as old-state}
+   {:keys [sv valence arousal percepts motivations]}]
+  {:ws ws
+   :motivations motivations
+   :sv (sv->values sv motivations)
+   :va [{:id :valence :name "Valence" :value valence}
+        {:id :arousal :name "Arousal" :value arousal}]
+   :percepts percepts
+   :sv-history (add-history sv-history sv)
+   :va-history (add-history va-history {:valence valence :arousal arousal})}
+    )
+
+(defn bind-state [{:keys [ws] :as data}]
   (go-loop []
     (when-let [{update :message} (<! ws)]
-      (prn update)
-      (om/transact! data
-                    (fn [cur-state]
-                      (update-state cur-state
-                                     (reader/read-string update))))
+;      (prn update)
+;      (om/transact! data #(make-new-state % (reader/read-string update)))
       (recur))))
 
-(defn single-value [{:keys [data] :as c} owner
-                    {:keys [label path] :as opts}]
+(defn single-value [{:keys [id name value] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (let [value (get-in data path)]
-        (dom/div #js {:className "single_value"}
-                 (dom/span #js {:className "label"} label)
-                 (dom/span #js {:className "value"} value))))))
+      (prn "single value" c)
+      (dom/div #js {:className "single_value"}
+               (dom/span #js {:className "label"} name)
+               (dom/span #js {:className "value"} value)))))
 
-(defn valence-arousal [{:keys [data] :as c} owner opts]
+(defn valence-arousal [{:keys [va] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
+      (prn "valence arousal" va)
       (dom/div #js {:className "valence_arousal"}
-               (om/build single-value c
-                         {:opts
-                          {:label "Valence"
-                           :path [:cur-state :valence]}})
-               (om/build single-value c
-                         {:opts
-                          {:label "Arousal"
-                           :path [:cur-state :arousal]}})))))
+               (om/build-all single-value va {:key :id})))))
 
-(defn sv-value [{:keys [id name value] :as c} owner opts]
+
+(defn satisfaction-vector [{:keys [sv] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (let []
-        (om/build single-value c
-                         {:opts
-                          {:label name
-                           :path [:id]}})))))
+      (prn "satisfaction vector" sv)
+      (prn (if (om/cursor? sv) "cursor" "not cursor"))
+      (dom/div #js {:className "satisfaction_vector"}
+               (dom/h2 nil "Satisfaction vector")
+               (dom/div #js {:className "contents"}
 
-(defn satisfaction-vector [{:keys [data] :as c} owner opts]
-  (reify
-    om/IRender
-    (render [_]
-      (let [motivations (:motivations data)
-            cur-state (:cur-state data)
-            ids (map :id motivations)
-            names (reduce {} (fn [a m] (assoc a (:id m) (:name m))) motivations)
-            mvalues (map (fn [id] {:id id :name (names id) :value (cur-state id)}) ids)]
-        (dom/div #js {:className "satisfaction_vector"}
-                 (dom/h2 nil "Satisfaction vector")
-                 (dom/div #js {:className "contents"}
-                          (om/build-all sv-value mvalues {:key :id})))))))
+                        (om/build-all single-value sv)
+                        )))))
 
 (defn motivations [app owner opts]
   (reify
@@ -90,13 +86,12 @@
       (dom/div #js {:className "motivations"}
                (dom/span nil "motivations")))))
 
-(defn history [{:keys [data] :as c} owner opts]
+(defn history [{:keys [sv-history] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (let [history (:history data)]
-        (dom/div #js {:className "history"}
-                 (dom/span nil "history"))))))
+      (dom/div #js {:className "history"}
+               (dom/span nil "history")))))
 
 
 (defn emotion-display-app [app owner]
@@ -116,6 +111,9 @@
 
 (go
   (let [ws (<! (ws-ch "ws://localhost:3000/ws"))
-        app-state (atom {:ws ws :data { :motivations [] :cur-state {} :history {}}})]
+        app-state (atom {:ws ws :motivations []
+                         :sv [{:id :phys-anger, :name "anger", :value 0} {:id :phys-hunger, :name "hunger", :value 0} {:id :phys-fear, :name "fear", :value 0} {:id :saf-bored, :name "bored", :value 0.098} {:id :saf-delight, :name "delight", :value 0} {:id :saf-playful, :name "playful", :value 0.049} {:id :soc-lonely, :name "lonely", :value 0.04875}]
+                         :va [{:id :valence :name "Valence" :value 0.2} {:id :arousal :name "Arousal" :value 0.3}]
+                         :percepts [] :sv-history {} :va-history {}})]
         (om/root app-state emotion-display-app
          (.getElementById js/document "app"))))
