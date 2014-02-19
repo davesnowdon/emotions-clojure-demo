@@ -44,8 +44,8 @@
 (defn bind-state [{:keys [ws] :as data}]
   (go-loop []
     (when-let [{update :message} (<! ws)]
-;      (prn update)
-;      (om/transact! data #(make-new-state % (reader/read-string update)))
+      (prn update)
+      (om/transact! data #(make-new-state % (reader/read-string update)))
       (recur))))
 
 (defn single-value [{:keys [id name value] :as c} owner opts]
@@ -62,7 +62,7 @@
     om/IRender
     (render [_]
       (prn "valence arousal" va)
-      (dom/div #js {:className "valence_arousal"}
+      (apply dom/div #js {:className "valence_arousal"}
                (om/build-all single-value va {:key :id})))))
 
 
@@ -74,8 +74,7 @@
       (prn (if (om/cursor? sv) "cursor" "not cursor"))
       (dom/div #js {:className "satisfaction_vector"}
                (dom/h2 nil "Satisfaction vector")
-               (dom/div #js {:className "contents"}
-
+               (apply dom/div #js {:className "contents"}
                         (om/build-all single-value sv)
                         )))))
 
@@ -115,5 +114,5 @@
                          :sv [{:id :phys-anger, :name "anger", :value 0} {:id :phys-hunger, :name "hunger", :value 0} {:id :phys-fear, :name "fear", :value 0} {:id :saf-bored, :name "bored", :value 0.098} {:id :saf-delight, :name "delight", :value 0} {:id :saf-playful, :name "playful", :value 0.049} {:id :soc-lonely, :name "lonely", :value 0.04875}]
                          :va [{:id :valence :name "Valence" :value 0.2} {:id :arousal :name "Arousal" :value 0.3}]
                          :percepts [] :sv-history {} :va-history {}})]
-        (om/root app-state emotion-display-app
-         (.getElementById js/document "app"))))
+    (om/root emotion-display-app app-state
+             {:target (.getElementById js/document "app")})))
