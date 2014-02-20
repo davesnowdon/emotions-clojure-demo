@@ -31,8 +31,7 @@
 (defn make-new-state
   [{:keys [ws sv-history va-history] :as old-state}
    {:keys [sv valence arousal percepts motivations]}]
-  {:ws ws
-   :motivations motivations
+  {:motivations motivations
    :sv (sv->values sv motivations)
    :va [{:id :valence :name "Valence" :value valence}
         {:id :arousal :name "Arousal" :value arousal}]
@@ -45,7 +44,7 @@
   (go-loop []
     (when-let [{update :message} (<! ws)]
       (prn update)
-      (om/transact! data #(make-new-state % (reader/read-string update)))
+      (om/transact! data :data #(make-new-state % (reader/read-string update)))
       (recur))))
 
 (defn single-value [{:keys [id name value] :as c} owner opts]
@@ -103,16 +102,15 @@
       (dom/div #js {:className "emotions"}
                (dom/h1 nil "Emotional NAO")
                (dom/div #js {:className "current_state"}
-                        (om/build valence-arousal app)
-                        (om/build satisfaction-vector app))
+                        (om/build valence-arousal (:data app))
+                        (om/build satisfaction-vector (:data app)))
                (om/build motivations app)
-               (om/build history app)))))
+               (om/build history (:data app))
+      ))))
 
 (go
   (let [ws (<! (ws-ch "ws://localhost:3000/ws"))
-        app-state (atom {:ws ws :motivations []
-                         :sv [{:id :phys-anger, :name "anger", :value 0} {:id :phys-hunger, :name "hunger", :value 0} {:id :phys-fear, :name "fear", :value 0} {:id :saf-bored, :name "bored", :value 0.098} {:id :saf-delight, :name "delight", :value 0} {:id :saf-playful, :name "playful", :value 0.049} {:id :soc-lonely, :name "lonely", :value 0.04875}]
-                         :va [{:id :valence :name "Valence" :value 0.2} {:id :arousal :name "Arousal" :value 0.3}]
-                         :percepts [] :sv-history {} :va-history {}})]
+        app-state (atom {:ws ws :data {:motivations [] :sv [] :va []
+                                       :percepts [] :sv-history {} :va-history {}} })]
     (om/root emotion-display-app app-state
              {:target (.getElementById js/document "app")})))
