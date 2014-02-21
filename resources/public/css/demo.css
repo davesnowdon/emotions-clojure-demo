@@ -1,9 +1,25 @@
 .single_value {
+    padding: 2px;
+    float: left;
+    position: relative;
 }
 
-.single_value label {
+.single_value.horizontal {
+}
+
+.single_value.vertical {
+}
+
+.single_value.horizontal label {
     width: 100px;
     display: inline-block;
+    padding-right: 10px;
+}
+
+.single_value.vertical label {
+    width: 100px;
+    display: block;
+    padding-right: 10px;
 }
 
 .single_value value {
@@ -12,4 +28,29 @@
 }
 
 .single_value img {
+    position: absolute;
+}
+
+.valence_arousal {
+    width: 100%;
+}
+
+.satisfaction_vector {
+    width: 100%;
+}
+
+.satisfaction_vector .contents {
+}
+
+
+.satisfaction_vector .contents  .single_value {
+    width: 20%;
+}
+
+.motivations {
+    clear: both;
+}
+
+.history {
+    clear: both;
 }

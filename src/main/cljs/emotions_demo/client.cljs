@@ -6,17 +6,15 @@
    [cljs.reader :as reader]
    [chord.client :refer [ws-ch]]
    [om.core :as om :include-macros true]
-   [om.dom :as dom :include-macros true]
-   [goog.string :as gstring]))
+   [om.dom :as dom :include-macros true]))
 
 (enable-console-print!)
 
 (def imgroot "/img")
 (def single-value-img-size 200)
 
-(defn message [{:keys [message]} owner]
-  (om/component
-    (dom/li nil message)))
+;(defn format-float [f ndp]
+;  (str (* nd)))
 
 (defn- motivations->id+name [motivations]
   (reduce (fn [a m] (assoc a (:id m) (:name m))) {} motivations))
@@ -54,10 +52,15 @@
   (reify
     om/IRender
     (render [_]
-      (let [imgsrc (if (< value 0) "red.png" "blue.png")
-            width (int (* (Math/abs value) single-value-img-size))
-            height 20]
-        (dom/div #js {:className "single_value"}
+      (let [layout (:layout opts :vertical)
+            layout-class (if (= layout :vertical) "vertical" "horizontal")
+            only-positive (:only-positive opts true)
+            bar-length (int (* (Math/abs value) single-value-img-size))
+            bar-width 20
+            imgsrc (if (< value 0) "red.png" "blue.png")
+            width (if (= layout :vertical) bar-width bar-length)
+            height (if (= layout :vertical) bar-length bar-width)]
+        (dom/div #js {:className (str "single_value" " " layout-class)}
                  (dom/span #js {:className "label"} name)
                  (dom/span #js {:className "value"} value)
                  (dom/img #js {:src (str imgroot "/" imgsrc)
@@ -69,7 +72,9 @@
     om/IRender
     (render [_]
       (apply dom/div #js {:className "valence_arousal"}
-               (om/build-all single-value va {:key :id})))))
+             (om/build-all single-value va {:key :id
+                                            :opts {:layout :horizontal
+                                                   :only-positive false}})))))
 
 
 (defn satisfaction-vector [{:keys [sv] :as c} owner opts]
@@ -79,7 +84,9 @@
       (dom/div #js {:className "satisfaction_vector"}
                (dom/h2 nil "Satisfaction vector")
                (apply dom/div #js {:className "contents"}
-                        (om/build-all single-value sv)
+                        (om/build-all single-value sv {:key :id
+                                                       :opts {:layout :vertical
+                                                              :only-positive true}})
                         )))))
 
 (defn motivations [app owner opts]
