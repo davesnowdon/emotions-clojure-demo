@@ -8,7 +8,7 @@
             [compojure.core :refer [defroutes GET routes]]
             [compojure.handler :refer [api]]
             [compojure.route :refer [resources]]
-            [hiccup.page :refer [html5 include-js]]
+            [hiccup.page :refer [html5 include-js include-css]]
             [hiccup.element :refer [javascript-tag]]
             [emotions-demo.core :refer :all]))
 
@@ -37,7 +37,8 @@
    [:head
     [:title "Clojure Emotional model demo"]]
     [:body
-      [:div#app]
+     [:div#app]
+      (include-css "/css/demo.css")
       (include-js "//fb.me/react-0.8.0.js") ; only required in dev build
       (include-js "/out/goog/base.js") ; only required in dev build
       (include-js "/js/demo.js")
@@ -61,6 +62,7 @@
     (GET "/ws" [] ws-handler)
     (resources "/js" {:root "js"})
     (resources "/out" {:root "out"}) ; only required in dev build
+    (resources "/" )
     ))
 
 (defn webapp []

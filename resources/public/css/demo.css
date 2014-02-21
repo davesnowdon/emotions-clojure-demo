@@ -1,0 +1,15 @@
+.single_value {
+}
+
+.single_value label {
+    width: 100px;
+    display: inline-block;
+}
+
+.single_value value {
+    display: inline-block;
+    width: 100px;
+}
+
+.single_value img {
+}

@@ -6,10 +6,13 @@
    [cljs.reader :as reader]
    [chord.client :refer [ws-ch]]
    [om.core :as om :include-macros true]
-   [om.dom :as dom :include-macros true]))
+   [om.dom :as dom :include-macros true]
+   [goog.string :as gstring]))
 
 (enable-console-print!)
 
+(def imgroot "/img")
+(def single-value-img-size 200)
 
 (defn message [{:keys [message]} owner]
   (om/component
@@ -51,16 +54,20 @@
   (reify
     om/IRender
     (render [_]
-      (prn "single value" c)
-      (dom/div #js {:className "single_value"}
-               (dom/span #js {:className "label"} name)
-               (dom/span #js {:className "value"} value)))))
+      (let [imgsrc (if (< value 0) "red.png" "blue.png")
+            width (int (* (Math/abs value) single-value-img-size))
+            height 20]
+        (dom/div #js {:className "single_value"}
+                 (dom/span #js {:className "label"} name)
+                 (dom/span #js {:className "value"} value)
+                 (dom/img #js {:src (str imgroot "/" imgsrc)
+                               :width (str width)
+                               :height (str height)}))))))
 
 (defn valence-arousal [{:keys [va] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (prn "valence arousal" va)
       (apply dom/div #js {:className "valence_arousal"}
                (om/build-all single-value va {:key :id})))))
 
@@ -69,8 +76,6 @@
   (reify
     om/IRender
     (render [_]
-      (prn "satisfaction vector" sv)
-      (prn (if (om/cursor? sv) "cursor" "not cursor"))
       (dom/div #js {:className "satisfaction_vector"}
                (dom/h2 nil "Satisfaction vector")
                (apply dom/div #js {:className "contents"}
