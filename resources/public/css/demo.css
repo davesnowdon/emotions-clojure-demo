@@ -70,6 +70,19 @@
     clear: both;
 }
 
+.percepts {
+    clear: both;
+}
+
+.percept {
+    display:inline-block;
+    padding: 2px;
+    margin: 2px;
+    color: black;
+    border: 1px solid #cccccc;
+    background-color: #dddddd;
+}
+
 .motivations {
     clear: both;
 }

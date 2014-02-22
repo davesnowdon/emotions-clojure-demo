@@ -118,6 +118,19 @@
                                             :only-positive true}})
                         )))))
 
+(defn percept-view
+  [{:keys [name] :as c} owner opts]
+  (dom/span #js {:className "percept"} name))
+
+(defn percepts-view
+  [{:keys [percepts] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "percepts"}
+               (apply dom/div #js {:className "contents"}
+                      (om/build-all percept-view percepts))))))
+
 (defn motivation-view
   [{:keys [name layer desire decay-rate max-delta] :as c} owner opts]
   (reify
@@ -200,6 +213,8 @@
                         (om/build valence-arousal-view (:data app))
                         (dom/div #js {:className "separator"})
                         (om/build satisfaction-vector-view (:data app)))
+               (dom/div #js {:className "separator"})
+               (om/build percepts-view (:data app))
                (dom/div #js {:className "separator"})
                (om/build motivations-view (:data app))
                (dom/div #js {:className "separator"})
