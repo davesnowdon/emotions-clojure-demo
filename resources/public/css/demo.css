@@ -74,6 +74,14 @@
     clear: both;
 }
 
+.motivation {
+    float: left;
+}
+
+.motivation .label {
+    font-weight: bold;
+}
+
 .history {
     clear: both;
 }

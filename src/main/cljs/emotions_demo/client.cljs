@@ -118,12 +118,42 @@
                                             :only-positive true}})
                         )))))
 
-(defn motivations [app owner opts]
+(defn motivation-view
+  [{:keys [name layer desire decay-rate max-delta] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
-      (dom/div #js {:className "motivations"}
-               (dom/span nil "motivations")))))
+      (dom/div #js {:className "motivation"
+                    :style #js {:width (:width opts "200px")}}
+               (dom/span #js {:className "label"} name)
+               (dom/table nil
+                          (dom/tr nil
+                                  (dom/td nil "Layer")
+                                  (dom/td nil (str layer)))
+                          (dom/tr nil
+                                  (dom/td nil "Desire")
+                                  (dom/td nil (format-float desire 4)))
+                          (dom/tr nil
+                                  (dom/td nil "Decay rate")
+                                  (dom/td nil (format-float decay-rate 4)))
+                          (dom/tr nil
+                                  (dom/td nil "Max delta")
+                                  (dom/td nil (format-float max-delta 4)))
+                          )))))
+
+(defn motivations [{:keys [motivations] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (let [m-width-pc (int (/ 100 (count motivations)))
+            m-width-str (str m-width-pc "%")]
+        (prn "Motivations" motivations)
+        (dom/div #js {:className "motivations"}
+                 (dom/h2 nil "Motivations")
+                 (apply dom/div #js {:className "contents"}
+                        (om/build-all motivation-view motivations
+                                      {:key :id
+                                       :opts {:width m-width-str}})))))))
 
 (defn history [{:keys [sv-history] :as c} owner opts]
   (reify
@@ -147,7 +177,7 @@
                         (dom/div #js {:className "separator"})
                         (om/build satisfaction-vector (:data app)))
                (dom/div #js {:className "separator"})
-               (om/build motivations app)
+               (om/build motivations (:data app))
                (dom/div #js {:className "separator"})
                (om/build history (:data app))
       ))))
