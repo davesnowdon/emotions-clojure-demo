@@ -16,6 +16,12 @@
 
 (def remote-clients-atom (atom {}))
 
+; would prefer not to have these as globals, need to think of a
+; cleaner way to share them with ws-handler
+(def state-chan (chan))
+
+(def percept-chan (chan))
+
 (def next-id!
   (let [counter (java.util.concurrent.atomic.AtomicLong.)]
     (fn [] (.incrementAndGet counter))))
@@ -53,7 +59,10 @@
     (go-loop []
       (when-let [{:keys [message]} (<! ws)]
         (println "Message received:" message)
-        (>! ws (format "You said: '%s' at %s." message (java.util.Date.)))
+        (let [[msg-type msg-body] (read-string message)]
+          (condp = msg-type
+            :connect (start-robot msg-body percept-chan state-chan)
+            (println "Unexpected message" msg-type msg-body)))
         (recur)))))
 
 (defn app-routes []
@@ -66,9 +75,7 @@
     ))
 
 (defn webapp []
-  (let [percept-chan (chan)
-        state-chan (chan)
-        remote-state-chan (chan)]
+  (let [remote-state-chan (chan)]
     (add-state-listener internal-clients-atom remote-state-chan)
     (remote-state-emitter remote-state-chan remote-clients-atom)
     (start-emotions percept-chan state-chan)

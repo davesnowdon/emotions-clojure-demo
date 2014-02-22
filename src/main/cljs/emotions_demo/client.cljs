@@ -12,9 +12,9 @@
 
 (def imgroot "/img")
 
-(def single-value-img-length 200)
-(def single-value-img-width 20)
-(def single-value-ndp 4)
+(def bar-view-img-length 200)
+(def bar-view-img-width 20)
+(def bar-view-ndp 4)
 
 (defn format-float
   "Simple minded function to truncate decimals"
@@ -54,14 +54,14 @@
       (om/transact! data :data #(make-new-state % (reader/read-string update)))
       (recur))))
 
-(defn single-value [{:keys [id name value] :as c} owner opts]
+(defn bar-view [{:keys [id name value] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (let [layout (:layout opts :vertical)
             layout-class (if (= layout :vertical) "vertical" "horizontal")
-            svl (:bar-length opts single-value-img-length)
-            svw (:bar-width opts single-value-img-width)
+            svl (:bar-length opts bar-view-img-length)
+            svw (:bar-width opts bar-view-img-width)
             only-positive (:only-positive opts true)
             bar-length (int (+ (* (Math/abs value) svl) 1))
             bar-width svw
@@ -80,10 +80,10 @@
             cheight (if (= layout :vertical) box-length box-width)
             ctop (if (= layout :vertical) loffset 0)
             cleft (if (= layout :vertical) 0 loffset)]
-        (dom/div #js {:className (str "single_value" " " layout-class)}
+        (dom/div #js {:className (str "bar_view" " " layout-class)}
                  (dom/span #js {:className "label"} name)
                  (dom/span #js {:className "value"}
-                           (format-float value single-value-ndp))
+                           (format-float value bar-view-ndp))
                  (dom/div #js {:className "contents"
                                :style #js {:width (str cwidth "px")
                                            :height (str cheight  "px")}}
@@ -94,25 +94,25 @@
                                                     :top (str ctop)
                                                     :left (str cleft)}})))))))
 
-(defn valence-arousal [{:keys [va] :as c} owner opts]
+(defn valence-arousal-view [{:keys [va] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (apply dom/div #js {:className "valence_arousal"}
-             (om/build-all single-value va
+             (om/build-all bar-view va
                            {:key :id
                             :opts {:layout :horizontal
                                    :only-positive false}})))))
 
 
-(defn satisfaction-vector [{:keys [sv] :as c} owner opts]
+(defn satisfaction-vector-view [{:keys [sv] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "satisfaction_vector"}
                (dom/h2 nil "Satisfaction vector")
                (apply dom/div #js {:className "contents"}
-                      (om/build-all single-value sv
+                      (om/build-all bar-view sv
                                     {:key :id
                                      :opts {:layout :vertical
                                             :only-positive true}})
@@ -141,7 +141,7 @@
                                   (dom/td nil (format-float max-delta 4)))
                           )))))
 
-(defn motivations [{:keys [motivations] :as c} owner opts]
+(defn motivations-view [{:keys [motivations] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
@@ -155,13 +155,37 @@
                                       {:key :id
                                        :opts {:width m-width-str}})))))))
 
-(defn history [{:keys [sv-history] :as c} owner opts]
+(defn history-view [{:keys [sv-history] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "history"}
                (dom/span nil "history")))))
 
+(defn save-robot-address [e owner {:keys [robot-address]}]
+  (om/set-state! owner :robot-address (.. e -target -value)))
+
+(defn connect-to-robot [ch owner]
+  (let [address (om/get-state owner :robot-address)]
+    (prn "Connecting to " address)
+    (put! ch (pr-str [:connect address]))))
+
+(defn robot-connect-view
+  [{:keys [ws] :as c} owner opts]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:robot-address ""})
+    om/IRenderState
+    (render-state [this state]
+      (dom/div #js {:className "robot_connect"}
+               (dom/span nil "Robot address")
+               (dom/input #js {:type "text"
+                               :ref "robot-address"
+                               :value (:robot-address state)
+                               :onChange #(save-robot-address % owner state)})
+               (dom/button #js {:onClick #(connect-to-robot ws owner)}
+                           "Connect robot!")))))
 
 (defn emotion-display-app [app owner]
   (reify
@@ -173,13 +197,15 @@
       (dom/div #js {:className "emotions"}
                (dom/h1 nil "Emotional NAO")
                (dom/div #js {:className "current_state"}
-                        (om/build valence-arousal (:data app))
+                        (om/build valence-arousal-view (:data app))
                         (dom/div #js {:className "separator"})
-                        (om/build satisfaction-vector (:data app)))
+                        (om/build satisfaction-vector-view (:data app)))
                (dom/div #js {:className "separator"})
-               (om/build motivations (:data app))
+               (om/build motivations-view (:data app))
                (dom/div #js {:className "separator"})
-               (om/build history (:data app))
+               (om/build history-view (:data app))
+               (dom/div #js {:className "separator"})
+               (om/build robot-connect-view app)
       ))))
 
 (go
