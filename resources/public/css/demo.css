@@ -1,7 +1,6 @@
 .single_value {
     padding: 2px;
     float: left;
-    position: relative;
 }
 
 .single_value.horizontal {
@@ -10,25 +9,45 @@
 .single_value.vertical {
 }
 
-.single_value.horizontal label {
+.single_value.horizontal .label {
     width: 100px;
     display: inline-block;
     padding-right: 10px;
 }
 
-.single_value.vertical label {
+.single_value.vertical .label {
     width: 100px;
     display: block;
-    padding-right: 10px;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.single_value value {
+.single_value.horizontal .value {
     display: inline-block;
-    width: 100px;
 }
 
-.single_value img {
+.single_value.vertical .value {
+    display: block;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.single_value .contents {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    padding: 0;
+    border: 1px solid #cccccc;
+}
+
+.single_value .contents img {
     position: absolute;
+    padding: 0;
+    margin: 0;
+    border: 0;
 }
 
 .valence_arousal {
@@ -44,7 +63,11 @@
 
 
 .satisfaction_vector .contents  .single_value {
-    width: 20%;
+    width: 10%;
+}
+
+.separator {
+    clear: both;
 }
 
 .motivations {

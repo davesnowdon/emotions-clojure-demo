@@ -11,10 +11,17 @@
 (enable-console-print!)
 
 (def imgroot "/img")
-(def single-value-img-size 200)
 
-;(defn format-float [f ndp]
-;  (str (* nd)))
+(def single-value-img-length 200)
+(def single-value-img-width 20)
+(def single-value-ndp 4)
+
+(defn format-float
+  "Simple minded function to truncate decimals"
+  [f ndp]
+  (let [s (str f)
+        l (+ (.indexOf s ".") ndp)]
+    (.substring s 0 l)))
 
 (defn- motivations->id+name [motivations]
   (reduce (fn [a m] (assoc a (:id m) (:name m))) {} motivations))
@@ -28,7 +35,6 @@
   (reduce (fn [a k] (assoc a k (conj (k history []) (k new-state)))) {}
           (keys new-state)))
 
-; this seems to change the state to not be a cursor
 (defn make-new-state
   [{:keys [ws sv-history va-history] :as old-state}
    {:keys [sv valence arousal percepts motivations]}]
@@ -54,27 +60,49 @@
     (render [_]
       (let [layout (:layout opts :vertical)
             layout-class (if (= layout :vertical) "vertical" "horizontal")
+            svl (:bar-length opts single-value-img-length)
+            svw (:bar-width opts single-value-img-width)
             only-positive (:only-positive opts true)
-            bar-length (int (* (Math/abs value) single-value-img-size))
-            bar-width 20
+            bar-length (int (+ (* (Math/abs value) svl) 1))
+            bar-width svw
+            box-length (if only-positive svl (* 2 svl))
+            box-width svw
+            loffset (cond
+                     (and only-positive (= layout :horizontal)) 0
+                     (and only-positive
+                          (= layout :vertical)) (- (+ svl 1) bar-length)
+                     (< value 0.0) (- (+ svl 1) bar-length)
+                     :else svl)
             imgsrc (if (< value 0) "red.png" "blue.png")
             width (if (= layout :vertical) bar-width bar-length)
-            height (if (= layout :vertical) bar-length bar-width)]
+            height (if (= layout :vertical) bar-length bar-width)
+            cwidth (if (= layout :vertical) box-width box-length)
+            cheight (if (= layout :vertical) box-length box-width)
+            ctop (if (= layout :vertical) loffset 0)
+            cleft (if (= layout :vertical) 0 loffset)]
         (dom/div #js {:className (str "single_value" " " layout-class)}
                  (dom/span #js {:className "label"} name)
-                 (dom/span #js {:className "value"} value)
-                 (dom/img #js {:src (str imgroot "/" imgsrc)
-                               :width (str width)
-                               :height (str height)}))))))
+                 (dom/span #js {:className "value"}
+                           (format-float value single-value-ndp))
+                 (dom/div #js {:className "contents"
+                               :style #js {:width (str cwidth "px")
+                                           :height (str cheight  "px")}}
+                          (dom/img #js {:src (str imgroot "/" imgsrc)
+                                        :width (str width)
+                                        :height (str height)
+                                        :style #js {
+                                                    :top (str ctop)
+                                                    :left (str cleft)}})))))))
 
 (defn valence-arousal [{:keys [va] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (apply dom/div #js {:className "valence_arousal"}
-             (om/build-all single-value va {:key :id
-                                            :opts {:layout :horizontal
-                                                   :only-positive false}})))))
+             (om/build-all single-value va
+                           {:key :id
+                            :opts {:layout :horizontal
+                                   :only-positive false}})))))
 
 
 (defn satisfaction-vector [{:keys [sv] :as c} owner opts]
@@ -84,9 +112,10 @@
       (dom/div #js {:className "satisfaction_vector"}
                (dom/h2 nil "Satisfaction vector")
                (apply dom/div #js {:className "contents"}
-                        (om/build-all single-value sv {:key :id
-                                                       :opts {:layout :vertical
-                                                              :only-positive true}})
+                      (om/build-all single-value sv
+                                    {:key :id
+                                     :opts {:layout :vertical
+                                            :only-positive true}})
                         )))))
 
 (defn motivations [app owner opts]
@@ -115,8 +144,11 @@
                (dom/h1 nil "Emotional NAO")
                (dom/div #js {:className "current_state"}
                         (om/build valence-arousal (:data app))
+                        (dom/div #js {:className "separator"})
                         (om/build satisfaction-vector (:data app)))
+               (dom/div #js {:className "separator"})
                (om/build motivations app)
+               (dom/div #js {:className "separator"})
                (om/build history (:data app))
       ))))
 
