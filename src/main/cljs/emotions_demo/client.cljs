@@ -173,7 +173,39 @@
     om/IRender
     (render [_]
       (dom/div #js {:className "history"}
-               (dom/span nil "history")))))
+               (dom/svg #js {:className "chart"})))
+
+    om/IDidMount
+    (did-mount [_ _]
+      (let [rdata #js [4, 8, 15, 16, 23, 42]
+            em (.selectAll (.select js/d3 ".chart") "circle")
+            data (.data em rdata d3/String)
+            enter (.append (.enter data) "circle")
+            yscale (.linear (. js/d3 -scale))
+            xscale (.linear (. js/d3 -scale))
+            rscale (.linear (. js/d3 -scale))
+            ]
+(-> yscale 
+  (.domain (array 0 20))
+  (.range (array 100 200)))
+(-> xscale
+  (.domain (array 0 20))
+  (.range (array 100 800)))
+(-> rscale
+  (.domain (array 0 20))
+  (.range (array 50 100)))
+(-> enter
+  (.attr "cx" xscale)
+  (.attr "cy" yscale)
+  (.attr "r" rscale)
+  (.style "fill" "steelblue")
+  (.style "stroke" "black")
+  (.style "stroke-width" "2")
+  )
+
+    )
+)
+))
 
 (defn save-robot-address [e owner {:keys [robot-address]}]
   (om/set-state! owner :robot-address (.. e -target -value)))
