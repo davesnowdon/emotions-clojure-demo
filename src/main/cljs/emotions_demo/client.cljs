@@ -6,7 +6,8 @@
    [cljs.reader :as reader]
    [chord.client :refer [ws-ch]]
    [om.core :as om :include-macros true]
-   [om.dom :as dom :include-macros true]))
+   [om.dom :as dom :include-macros true]
+   [strokes :refer [d3]]))
 
 (enable-console-print!)
 
@@ -178,30 +179,17 @@
     om/IDidMount
     (did-mount [_ _]
       (let [rdata #js [4, 8, 15, 16, 23, 42]
-            em (.selectAll (.select js/d3 ".chart") "circle")
-            data (.data em rdata d3/String)
-            enter (.append (.enter data) "circle")
-            yscale (.linear (. js/d3 -scale))
-            xscale (.linear (. js/d3 -scale))
-            rscale (.linear (. js/d3 -scale))
+            svg (-> d3 (.select "svg")
+            (.attr {:width 600 :height 200}))
             ]
-(-> yscale 
-  (.domain (array 0 20))
-  (.range (array 100 200)))
-(-> xscale
-  (.domain (array 0 20))
-  (.range (array 100 800)))
-(-> rscale
-  (.domain (array 0 20))
-  (.range (array 50 100)))
-(-> enter
-  (.attr "cx" xscale)
-  (.attr "cy" yscale)
-  (.attr "r" rscale)
-  (.style "fill" "steelblue")
-  (.style "stroke" "black")
-  (.style "stroke-width" "2")
-  )
+(-> svg (.append "circle")
+      (.attr {:cx 350 :cy 200 :r 200 :class "left"}))
+
+(-> svg (.append "circle")
+      (.attr {:cx 550 :cy 200 :r 200 :class "right"}))
+
+(-> svg (.append "circle")
+      (.attr {:cx 450 :cy 300 :r 200 :class "bottom"}))
 
     )
 )
@@ -254,6 +242,8 @@
                (dom/div #js {:className "separator"})
                (om/build robot-connect-view app)
       ))))
+
+(strokes/bootstrap)
 
 (go
   (let [ws (<! (ws-ch "ws://localhost:3000/ws"))
