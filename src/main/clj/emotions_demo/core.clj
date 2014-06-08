@@ -3,13 +3,27 @@
              :refer [<! >! <!! timeout chan alt! put! go go-loop]]
             [clojure.string :refer [trim]]
             [clojure.pprint :refer [pprint]]
+            [clj-time.core :as t]
+            [clj-time.format :as tf]
             [naojure.core :as nao]
             [emotions.core :refer :all]
-            [emotions.util :refer [float=]]))
+            [emotions.util :refer [float= seconds-diff]]))
+
+(def datetime-formatter (tf/formatters :rfc822))
 
 (def model-update-ms 2000)
 
 (def internal-clients-atom (atom []))
+
+(def last-update-time (atom (t/now)))
+
+(def location (atom #{{:id :home :name "Home"}}))
+
+(def short-term-memory-retain-period (t/minutes 5))
+
+(def short-term-memory (atom {:stm #{} :expired #{}}))
+
+(def long-term-memory (atom (long-term-memory-init)))
 
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
@@ -81,6 +95,25 @@
 ;; - do happy
 ;; - need a bored behaviour
 
+(defn stm-add-learn-and-expire
+  "Add new percepts to short-term memory and expire old ones"
+  [stm percepts sv motivations timestamp]
+  (-> stm
+      (:stm)
+      (short-term-memory-add percepts sv equivalent-percepts
+                             short-term-memory-retain-period
+                             timestamp)
+      (short-term-memory-learn sv motivations timestamp)
+      (short-term-memory-expired timestamp)))
+
+(defn ltm-update
+  "Take percepts that have expired from short-term memory and add any significant enough to long-term memory"
+  [ltm percepts]
+  (let [significant-percepts (filter percept-significant? percepts)]
+    ;; if significant-percepts is empty then reduce does not call
+    ;; long-term-memory-add-percept and simply returns ltm
+    (reduce long-term-memory-add-percept ltm significant-percepts)))
+
 (defn emotions-process
   "Loop that receives percepts and updates the emotional model"
   [percept-chan state-chan]
@@ -102,19 +135,43 @@
                           timer))
 
                  timer
-                 (let [[new-motivations new-sv]
+                 (let [timestamp (t/now)
+                       time-since-update
+                       (seconds-diff timestamp @last-update-time)
+                       [new-motivations new-sv]
                        (percepts->motivations+sv layers
                                                  layer-multiplers
                                                  motivations
-                                                 percepts)
+                                                 percepts
+                                                 time-since-update)
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
-;;                   (pprint new-motivations)
+                   ;; (pprint new-motivations)
+                   ;; update short-term memory
+                   (swap! short-term-memory
+                          stm-add-learn-and-expire
+                          percepts
+                          new-sv
+                          new-motivations
+                          timestamp)
+
+                   ;; update long-term memory
+                   (swap! long-term-memory
+                          ltm-update
+                          (:expired @short-term-memory))
+
+                   ;; store when last update occurred
+                   (reset! last-update-time timestamp)
+
                    (>! state-chan {:sv new-sv
                                    :valence valence
                                    :arousal arousal
                                    :percepts percepts
-                                   :motivations new-motivations})
+                                   :motivations new-motivations
+                                   :stm (:stm @short-term-memory)
+                                   :ltm @long-term-memory
+                                   :location @location
+                                   :timestamp timestamp})
                    (recur new-sv new-motivations []
                           (timeout (long model-update-ms)))))))))
 
@@ -129,7 +186,8 @@
 (defn state-display
   [display-chan]
   (go-loop [state (<! display-chan)]
-           (let [{:keys [sv valence arousal percepts]} state]
+           (let [{:keys [sv valence arousal percepts timestamp]} state]
+             (println (tf/unparse datetime-formatter timestamp))
              (println "Valence:" valence "Arousal:" arousal)
              (doseq [[k v] sv]
                (println "SV:  " k " - " v))
