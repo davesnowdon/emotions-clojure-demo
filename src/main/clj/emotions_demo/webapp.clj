@@ -45,9 +45,10 @@
     [:body
      [:div#app]
       (include-css "/css/demo.css")
-      (include-js "//fb.me/react-0.8.0.js") ; only required in dev build
+      (include-js "/jslib/react/react-0.9.0.js") ; only required in dev build
       (include-js "/out/goog/base.js") ; only required in dev build
       (include-js "/jslib/d3/d3.min.js")
+      (include-js "/jslib/cubism/cubism.v1.min.js")
       (include-js "/js/demo.js")
       (javascript-tag "goog.require('emotions_demo.client');") ; only required in dev build
       ]))

@@ -22,7 +22,8 @@
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/tools.reader "0.8.3"]
                  [prismatic/dommy "0.1.2"]
-                 [om "0.5.1"]]
+                 [om "0.5.1"]
+		 [net.drib/strokes "0.5.1"]]
 
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.0.2"]
@@ -51,8 +52,7 @@
                 :optimizations :advanced
                 :pretty-print false
                 :preamble ["react/react.min.js"]
-                :externs ["react/externs/react.js"
-                          "externs/d3_externs_min.js"]}}
+                :externs ["react/externs/react.js"]}}
                 ]}
 
 )
