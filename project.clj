@@ -16,7 +16,7 @@
                  [ring/ring-core "1.2.1"]
                  [javax.servlet/servlet-api "2.5"]
                  [hiccup "1.0.5"]
-                 [emotions "0.1.3"]
+                 [emotions "0.1.4"]
                  [naojure "0.2.3"]
 
                  [org.clojure/clojurescript "0.0-2156"]
