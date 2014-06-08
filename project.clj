@@ -17,7 +17,7 @@
                  [javax.servlet/servlet-api "2.5"]
                  [hiccup "1.0.5"]
                  [emotions "0.1.3"]
-                 [naojure "0.2.2"]
+                 [naojure "0.2.3"]
 
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/tools.reader "0.8.3"]
