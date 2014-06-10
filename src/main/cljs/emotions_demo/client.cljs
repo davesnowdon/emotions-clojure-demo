@@ -24,6 +24,22 @@
         l (+ (.indexOf s ".") ndp)]
     (.substring s 0 l)))
 
+(defn format-sv
+  [sv]
+  (reduce (fn [s [k v]] (str s " " (.substring (str k) 1) "=" v)) "" (sort sv)))
+
+(defn format-date
+  [date]
+  (str date))
+
+(defn format-agents
+  [agents]
+  (str agents))
+
+(defn format-locations
+  [locations]
+  (str locationsg))
+
 (defn- motivations->id+name [motivations]
   (reduce (fn [a m] (assoc a (:id m) (:name m))) {} motivations))
 
@@ -195,6 +211,79 @@
 )
 ))
 
+(defn short-term-item-view
+  [{:keys [name other-agents locations stm-entry stm-expiration satisfaction-vector-obs learning-vector] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "memory_item"}
+               (dom/span #js {:className "label"} name)
+               (dom/table nil
+                          (dom/tr nil
+                                  (dom/td nil "Entry")
+                                  (dom/td nil (format-date stm-entry)))
+                          (dom/tr nil
+                                  (dom/td nil "Expiration")
+                                  (dom/td nil (format-date stm-expiration)))
+                          (dom/tr nil
+                                  (dom/td nil "Agents")
+                                  (dom/td nil (format-agents other-agents)))
+                          (dom/tr nil
+                                  (dom/td nil "Location")
+                                  (dom/td nil (format-locations locations )))
+                          (dom/tr nil
+                                  (dom/td nil "Observed")
+                                  (dom/td nil (format-sv satisfaction-vector-obs)))
+                          (dom/tr nil
+                                  (dom/td nil "Learning")
+                                  (dom/td nil (format-sv learning-vector)))
+                          )))))
+
+(defn short-term-memory-view [{:keys [stm] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "memory"}
+               (dom/h2 nil "Short-term memory")
+               (apply dom/div #js {:className "contents"}
+                      (om/build-all short-term-item-view stm
+                                    {:key :id}))))))
+
+(defn long-term-item-view
+  [{:keys [name layer desire decay-rate max-delta] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "memory_item"}
+               (dom/span #js {:className "label"} name)
+               (dom/table nil
+                          (dom/tr nil
+                                  (dom/td nil "Entry")
+                                  (dom/td nil (str layer)))
+                          (dom/tr nil
+                                  (dom/td nil "Updates")
+                                  (dom/td nil (format-float desire 4)))
+                          (dom/tr nil
+                                  (dom/td nil "Agents")
+                                  (dom/td nil (format-float decay-rate 4)))
+                          (dom/tr nil
+                                  (dom/td nil "Location")
+                                  (dom/td nil (format-float max-delta 4)))
+                          (dom/tr nil
+                                  (dom/td nil "SV")
+                                  (dom/td nil (format-float max-delta 4)))
+                          )))))
+
+(defn long-term-memory-view [{:keys [stm] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "memory"}
+               (dom/h2 nil "Long-term memory")
+               (apply dom/div #js {:className "contents"}
+                      (om/build-all long-term-item-view stm
+                                    {:key :id}))))))
+
 (defn save-robot-address [e owner {:keys [robot-address]}]
   (om/set-state! owner :robot-address (.. e -target -value)))
 
@@ -238,7 +327,11 @@
                (dom/div #js {:className "separator"})
                (om/build motivations-view (:data app))
                (dom/div #js {:className "separator"})
-               (om/build history-view (:data app))
+               (om/build short-term-memory-view (:data app))
+               (dom/div #js {:className "separator"})
+               (om/build long-term-memory-view (:data app))
+;               (dom/div #js {:className "separator"})
+;               (om/build history-view (:data app))
                (dom/div #js {:className "separator"})
                (om/build robot-connect-view app)
       ))))

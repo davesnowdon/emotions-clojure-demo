@@ -95,6 +95,19 @@
     font-weight: bold;
 }
 
+.memory {
+    clear: both;
+}
+
+.memory_item {
+    float: left;
+    width: 25%;
+}
+
+.memory_item .label {
+    font-weight: bold;
+}
+
 .history {
     clear: both;
 }
