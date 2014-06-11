@@ -112,6 +112,14 @@
     clear: both;
 }
 
+.face_recognition {
+    clear: both;
+}
+
+.face_recognition div {
+    float: left;
+}
+
 .chart rect {
   fill: steelblue;
 }

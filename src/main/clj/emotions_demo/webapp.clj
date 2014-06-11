@@ -65,6 +65,7 @@
         (let [[msg-type msg-body] (read-string message)]
           (condp = msg-type
             :connect (start-robot msg-body percept-chan state-chan)
+            :recognised (recognised-agent msg-body percept-chan)
             (println "Unexpected message" msg-type msg-body)))
         (recur)))))
 

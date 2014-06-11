@@ -54,14 +54,16 @@
 
 (defn make-new-state
   [{:keys [ws sv-history va-history] :as old-state}
-   {:keys [sv valence arousal percepts motivations]}]
+   {:keys [sv valence arousal percepts motivations stm ltm]}]
   {:motivations motivations
    :sv (sv->values sv motivations)
    :va [{:id :valence :name "Valence" :value valence}
         {:id :arousal :name "Arousal" :value arousal}]
    :percepts percepts
    :sv-history (add-history sv-history sv)
-   :va-history (add-history va-history {:valence valence :arousal arousal})}
+   :va-history (add-history va-history {:valence valence :arousal arousal})
+   :stm stm
+   :ltm ltm}
     )
 
 (defn bind-state [{:keys [ws] :as data}]
@@ -274,15 +276,34 @@
                                   (dom/td nil (format-sv satisfaction-vector)))
                           )))))
 
-(defn long-term-memory-view [{:keys [stm] :as c} owner opts]
+(defn long-term-memory-view [{:keys [ltm] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "memory"}
-               (dom/h2 nil "Long-term memory")
+               (dom/h2 nil "Long-term memory (percepts)")
                (apply dom/div #js {:className "contents"}
-                      (om/build-all long-term-item-view stm
+                      (om/build-all long-term-item-view (:percepts ltm)
                                     {:key :id}))))))
+
+(defn fake-saw-face
+  [ch face-id]
+  (put! ch (pr-str [:recognised face-id])))
+
+(defn fake-face-recognition-view
+  [{:keys [ws] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "face_recognition"}
+               (dom/h2 nil "Fake face recognition")
+               (dom/div #js {:onClick #(fake-saw-face ws :linus_torvalds)}
+                        (dom/img #js {:src (str imgroot "/linus_torvalds.jpg")}))
+               (dom/div #js {:onClick #(fake-saw-face ws :steve_ballmer)}
+                        (dom/img #js {:src (str imgroot "/steve_ballmer.jpg")}))
+               (dom/div #js {:onClick #(fake-saw-face ws :nao_robot)}
+                        (dom/img #js {:src (str imgroot "/nao_robot.jpg")}))
+               ))))
 
 (defn save-robot-address [e owner {:keys [robot-address]}]
   (om/set-state! owner :robot-address (.. e -target -value)))
@@ -330,6 +351,8 @@
                (om/build short-term-memory-view (:data app))
                (dom/div #js {:className "separator"})
                (om/build long-term-memory-view (:data app))
+               (dom/div #js {:className "separator"})
+               (om/build fake-face-recognition-view app)
 ;               (dom/div #js {:className "separator"})
 ;               (om/build history-view (:data app))
                (dom/div #js {:className "separator"})
@@ -341,6 +364,10 @@
 (go
   (let [ws (<! (ws-ch "ws://localhost:3000/ws"))
         app-state (atom {:ws ws :data {:motivations [] :sv [] :va []
-                                       :percepts [] :sv-history {} :va-history {}} })]
+                                       :percepts []
+                                       :sv-history {}
+                                       :va-history {}
+                                       :stm #{}
+                                       :ltm #{}}})]
     (om/root emotion-display-app app-state
              {:target (.getElementById js/document "app")})))

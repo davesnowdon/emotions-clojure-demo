@@ -34,25 +34,32 @@
 (def demo-motivations
   [{:id :phys-anger :name "anger" :layer :physical
     :valence -0.7 :arousal 0.7
-    :desire 0.0 :decay-rate -0.02 :max-delta 1.0}
+    :desire 0.0 :decay-rate -0.02 :max-delta 1.0
+    :learning-window 30000}
    {:id :phys-hunger :name "hunger" :layer :physical
     :valence 0.0 :arousal 0.5
-    :desire 0.0 :decay-rate 0.0 :max-delta 1.0}
+    :desire 0.0 :decay-rate 0.0 :max-delta 1.0
+    :learning-window (* 2 60 60 1000)}
    {:id :phys-fear :name "fear" :layer :physical
     :valence -0.9 :arousal 0.2
-    :desire 0.0 :decay-rate -0.2 :max-delta 1.0}
+    :desire 0.0 :decay-rate -0.2 :max-delta 1.0
+    :learning-window 30000}
    {:id :saf-bored :name "bored" :layer :safety
     :valence -0.1 :arousal -0.4
-    :desire 0.0 :decay-rate 0.02 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.02 :max-delta 0.3
+    :learning-window (* 5 60 1000)}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
-    :desire 0.0 :decay-rate 0.0 :max-delta 0.8}
+    :desire 0.0 :decay-rate 0.0 :max-delta 0.8
+    :learning-window 60000}
    {:id :saf-playful :name "playful" :layer :safety
     :valence 0.6 :arousal 0.9
-    :desire 0.0 :decay-rate 0.01 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.01 :max-delta 0.3
+    :learning-window (* 30 60 1000)}
    {:id :soc-lonely :name "lonely" :layer :social
     :valence -0.6 :arousal -0.6
-    :desire 0.0 :decay-rate 0.01 :max-delta 0.3}
+    :desire 0.0 :decay-rate 0.01 :max-delta 0.3
+    :learning-window (* 60 60 1000)}
    ])
 
 (def demo-control-points
@@ -83,6 +90,40 @@
    {:valence 1.0 :arousal -1.0 :expression-vector
     {}}
    ])
+
+(def demo-agents
+  {
+   :linus_torvalds
+   {:name "Recognised"
+    :other-agents #{:linus_torvalds}
+    :satisfaction-vector {:phys-anger 0.0
+                          :phys-hunger 0.0
+                          :phys-fear 0.1
+                          :saf-bored -0.25
+                          :saf-delight -0.4
+                          :saf-playful -0.1
+                          :soc-lonely -0.2}}
+   :steve_ballmer
+   {:name "Recognised"
+    :other-agents #{:steve_ballmer}
+    :satisfaction-vector {:phys-anger 0.1
+                          :phys-hunger 0.0
+                          :phys-fear 0.4
+                          :saf-bored -0.1
+                          :saf-delight 0.0
+                          :saf-playful -0.1
+                          :soc-lonely -0.1}}
+   :nao_robot
+   {:name "Recognised"
+    :other-agents #{:nao_robot}
+    :satisfaction-vector {:phys-anger 0.0
+                          :phys-hunger 0.0
+                          :phys-fear -0.2
+                          :saf-bored -0.25
+                          :saf-delight -0.5
+                          :saf-playful -0.2
+                          :soc-lonely -0.3}}
+   })
 
 ;; TODO percepts
 ;; - see Ballmer
@@ -147,6 +188,10 @@
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
                    ;; (pprint new-motivations)
+
+                   ;;(println "Before learn")
+                   ;;(println (pr-str @short-term-memory))
+
                    ;; update short-term memory
                    (swap! short-term-memory
                           stm-add-learn-and-expire
@@ -155,10 +200,16 @@
                           new-motivations
                           timestamp)
 
+                   ;;(println "After learn")
+                   ;;(println (pr-str @short-term-memory))
+
                    ;; update long-term memory
                    (swap! long-term-memory
                           ltm-update
                           (:expired @short-term-memory))
+
+                   ;;(println "LTM")
+                   ;;(println (pr-str @long-term-memory))
 
                    ;; store when last update occurred
                    (reset! last-update-time timestamp)
@@ -373,6 +424,14 @@
 (defn add-state-listener
   [clients-atom listener-chan]
   (swap! clients-atom conj listener-chan))
+
+(defn recognised-agent
+  [agent-id percept-chan]
+  (let [percept (-> (demo-agents agent-id)
+                  (assoc :timestamp (t/now)
+                         :locations @location))]
+    (println "Recognised" agent-id " -> " (pr-str percept))
+    (put! percept-chan percept)))
 
 (defn start-robot
   [hostname percept-chan state-chan]
