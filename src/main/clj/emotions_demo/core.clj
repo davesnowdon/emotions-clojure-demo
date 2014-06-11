@@ -46,7 +46,7 @@
     :learning-window 30000}
    {:id :saf-bored :name "bored" :layer :safety
     :valence -0.1 :arousal -0.4
-    :desire 0.0 :decay-rate 0.02 :max-delta 0.3
+    :desire 0.0 :decay-rate 0.01 :max-delta 0.3
     :learning-window (* 5 60 1000)}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
@@ -54,11 +54,11 @@
     :learning-window 60000}
    {:id :saf-playful :name "playful" :layer :safety
     :valence 0.6 :arousal 0.9
-    :desire 0.0 :decay-rate 0.01 :max-delta 0.3
+    :desire 0.0 :decay-rate 0.005 :max-delta 0.3
     :learning-window (* 30 60 1000)}
    {:id :soc-lonely :name "lonely" :layer :social
     :valence -0.6 :arousal -0.6
-    :desire 0.0 :decay-rate 0.01 :max-delta 0.3
+    :desire 0.0 :decay-rate 0.005 :max-delta 0.3
     :learning-window (* 60 60 1000)}
    ])
 
@@ -99,7 +99,7 @@
     :satisfaction-vector {:phys-anger 0.0
                           :phys-hunger 0.0
                           :phys-fear 0.1
-                          :saf-bored -0.25
+                          :saf-bored -0.5
                           :saf-delight -0.4
                           :saf-playful -0.1
                           :soc-lonely -0.2}}
@@ -108,8 +108,8 @@
     :other-agents #{:steve_ballmer}
     :satisfaction-vector {:phys-anger 0.1
                           :phys-hunger 0.0
-                          :phys-fear 0.4
-                          :saf-bored -0.1
+                          :phys-fear 0.8
+                          :saf-bored -0.5
                           :saf-delight 0.0
                           :saf-playful -0.1
                           :soc-lonely -0.1}}
@@ -119,8 +119,8 @@
     :satisfaction-vector {:phys-anger 0.0
                           :phys-hunger 0.0
                           :phys-fear -0.2
-                          :saf-bored -0.25
-                          :saf-delight -0.5
+                          :saf-bored -0.5
+                          :saf-delight -0.6
                           :saf-playful -0.2
                           :soc-lonely -0.3}}
    })
@@ -274,9 +274,12 @@
 
 (defn anger-reaction-percept
   [done-signal]
-  {:name "Got angry" :satisfaction-vector
-   {:phys-anger -0.5
-    :saf-bored -0.3}})
+  {:name "Got angry"
+   :satisfaction-vector {:phys-anger -0.5
+                         :saf-bored -0.3}
+   :timestamp (t/now)
+   :locations @location
+   :other-agents #{}})
 
 (defn anger-management
   [robot percept-chan]
@@ -296,9 +299,12 @@
 
 (defn lonely-reaction-percept
   [done-signal]
-  {:name "Very lonely" :satisfaction-vector
-   {:soc-lonely -0.4
-    :saf-bored 0.1}})
+  {:name "Very lonely"
+   :satisfaction-vector {:soc-lonely -0.4
+                         :saf-bored 0.1}
+   :timestamp (t/now)
+   :locations @location
+   :other-agents #{}})
 
 (defn loneliness-management
   [robot percept-chan]
@@ -320,9 +326,12 @@
 
 (defn bored-reaction-percept
   [done-signal]
-  {:name "Bored" :satisfaction-vector
-   {:soc-lonely 0.05
-    :saf-bored -0.1}})
+  {:name "Bored"
+   :satisfaction-vector {:soc-lonely 0.05
+                         :saf-bored -0.1}
+   :timestamp (t/now)
+   :locations @location
+   :other-agents #{}})
 
 (defn react-scared?
   [state]
@@ -334,9 +343,12 @@
 
 (defn fear-reaction-percept
   [done-signal]
-  {:name "Got scared" :satisfaction-vector
-   {:phys-fear -0.2
-    :saf-bored -0.5}})
+  {:name "Got scared"
+   :satisfaction-vector {:phys-fear -0.2
+                         :saf-bored -0.5}
+   :timestamp (t/now)
+   :locations @location
+   :other-agents #{}})
 
 (defn fear-management
   [robot percept-chan]
@@ -355,9 +367,12 @@
 
 (defn delight-reaction-percept
   [done-signal]
-  {:name "Happy & Playful" :satisfaction-vector
-   {:saf-delight -0.4
-    :saf-playful -0.4}})
+  {:name "Happy & Playful"
+   :satisfaction-vector {:saf-delight -0.4
+                         :saf-playful -0.4}
+   :timestamp (t/now)
+   :locations @location
+   :other-agents #{}})
 
 (defn delight-management
   [robot percept-chan]
@@ -375,9 +390,12 @@
            (do
              (if (float= 1.0 value)
                (>! percept-chan
-                   {:name "Head touched" :satisfaction-vector
-                    {:phys-anger 0.2
-                     :saf-bored -0.3}}))
+                   {:name "Head touched"
+                    :satisfaction-vector {:phys-anger 0.2
+                                          :saf-bored -0.3}
+                    :timestamp (t/now)
+                    :locations @location
+                    :other-agents #{:unknown}}))
              (recur (<! event-chan)))))
 
 (defn back-head-touch-process
@@ -386,9 +404,12 @@
            (do
              (if (float= 1.0 value)
                (>! percept-chan
-                   {:name "Back Head touched" :satisfaction-vector
-                    {:phys-fear 1.0
-                     :saf-bored -0.3}}))
+                   {:name "Back Head touched"
+                    :satisfaction-vector {:phys-fear 1.0
+                                          :saf-bored -0.3}
+                    :timestamp (t/now)
+                    :locations @location
+                    :other-agents #{:unknown}}))
              (recur (<! event-chan)))))
 
 (defn hand-touch-process
@@ -397,10 +418,13 @@
            (do
              (if (float= 1.0 value)
                (>! percept-chan
-                   {:name "Hand touched" :satisfaction-vector
-                    {:phys-anger -0.2
-                     :saf-bored -0.2
-                     :soc-lonely -0.3}}))
+                   {:name "Hand touched"
+                    :satisfaction-vector {:phys-anger -0.2
+                                          :saf-bored -0.2
+                                          :soc-lonely -0.3}
+                    :timestamp (t/now)
+                    :locations @location
+                    :other-agents #{:unknown}}))
              (recur (<! event-chan)))))
 
 (defn foot-touch-process
@@ -409,10 +433,13 @@
            (do
              (if (float= 1.0 value)
                (>! percept-chan
-                   {:name "Foot touched" :satisfaction-vector
-                    {:phys-anger -0.1
-                     :saf-bored -0.2
-                     :saf-playful 0.2}}))
+                   {:name "Foot touched"
+                    :satisfaction-vector {:phys-anger -0.1
+                                          :saf-bored -0.2
+                                          :saf-playful 0.2}
+                    :timestamp (t/now)
+                    :locations @location
+                    :other-agents #{:unknown}}))
              (recur (<! event-chan)))))
 
 (defn face-detected-process
