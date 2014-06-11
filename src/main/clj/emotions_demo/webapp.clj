@@ -10,6 +10,7 @@
             [compojure.route :refer [resources]]
             [hiccup.page :refer [html5 include-js include-css]]
             [hiccup.element :refer [javascript-tag]]
+            [emotions.serialise :refer [serialise]]
             [emotions-demo.core :refer :all]))
 
 (defconfig my-config (io/resource "config/demo.edn"))
@@ -35,7 +36,7 @@
   (go-loop [state (<! state-chan)]
            (when state
              (doseq [[client-id client-chan] @clients-atom]
-               (>! client-chan (pr-str state)))
+               (>! client-chan (pr-str (serialise state))))
              (recur (<! state-chan)))))
 
 (defn index-page []

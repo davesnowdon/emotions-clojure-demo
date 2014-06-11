@@ -38,7 +38,7 @@
 
 (defn format-locations
   [locations]
-  (str locationsg))
+  (str locations))
 
 (defn- motivations->id+name [motivations]
   (reduce (fn [a m] (assoc a (:id m) (:name m))) {} motivations))
@@ -250,7 +250,7 @@
                                     {:key :id}))))))
 
 (defn long-term-item-view
-  [{:keys [name layer desire decay-rate max-delta] :as c} owner opts]
+  [{:keys [name ltm-entry ltm-update-count other-agents locations satisfaction-vector] :as c} owner opts]
   (reify
     om/IRender
     (render [_]
@@ -259,19 +259,19 @@
                (dom/table nil
                           (dom/tr nil
                                   (dom/td nil "Entry")
-                                  (dom/td nil (str layer)))
+                                  (dom/td nil (format-date ltm-entry)))
                           (dom/tr nil
                                   (dom/td nil "Updates")
-                                  (dom/td nil (format-float desire 4)))
+                                  (dom/td nil (str ltm-update-count)))
                           (dom/tr nil
                                   (dom/td nil "Agents")
-                                  (dom/td nil (format-float decay-rate 4)))
+                                  (dom/td nil (format-agents other-agents)))
                           (dom/tr nil
                                   (dom/td nil "Location")
-                                  (dom/td nil (format-float max-delta 4)))
+                                  (dom/td nil (format-locations locations)))
                           (dom/tr nil
                                   (dom/td nil "SV")
-                                  (dom/td nil (format-float max-delta 4)))
+                                  (dom/td nil (format-sv satisfaction-vector)))
                           )))))
 
 (defn long-term-memory-view [{:keys [stm] :as c} owner opts]
