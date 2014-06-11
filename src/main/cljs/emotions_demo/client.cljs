@@ -24,9 +24,13 @@
         l (+ (.indexOf s ".") ndp)]
     (.substring s 0 l)))
 
+(defn format-kw
+  [k]
+  (.substring (str k) 1))
+
 (defn format-sv
   [sv]
-  (reduce (fn [s [k v]] (str s " " (.substring (str k) 1) "=" v)) "" (sort sv)))
+  (reduce (fn [s [k v]] (str s " " (format-kw k) "=" (format-float v 4))) "" (sort sv)))
 
 (defn format-date
   [date]
