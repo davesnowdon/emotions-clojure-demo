@@ -96,10 +96,8 @@
    :linus_torvalds
    {:name "Recognised"
     :other-agents #{:linus_torvalds}
-    :satisfaction-vector {:phys-anger 0.0
-                          :phys-hunger 0.0
-                          :phys-fear 0.1
-                          :saf-bored -0.5
+    :satisfaction-vector {:phys-fear 0.1
+                          :saf-bored -0.6
                           :saf-delight -0.4
                           :saf-playful -0.1
                           :soc-lonely -0.2}}
@@ -107,19 +105,15 @@
    {:name "Recognised"
     :other-agents #{:steve_ballmer}
     :satisfaction-vector {:phys-anger 0.1
-                          :phys-hunger 0.0
                           :phys-fear 0.8
                           :saf-bored -0.5
-                          :saf-delight 0.0
                           :saf-playful -0.1
                           :soc-lonely -0.1}}
    :nao_robot
    {:name "Recognised"
     :other-agents #{:nao_robot}
-    :satisfaction-vector {:phys-anger 0.0
-                          :phys-hunger 0.0
-                          :phys-fear -0.2
-                          :saf-bored -0.5
+    :satisfaction-vector {:phys-fear -0.2
+                          :saf-bored -0.6
                           :saf-delight -0.6
                           :saf-playful -0.2
                           :soc-lonely -0.3}}
