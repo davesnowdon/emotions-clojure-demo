@@ -252,7 +252,8 @@
       (dom/div #js {:className "memory"}
                (dom/h2 nil "Short-term memory")
                (apply dom/div #js {:className "contents"}
-                      (om/build-all short-term-item-view stm
+                      (om/build-all short-term-item-view
+                                    (sort-by :stm-entry stm)
                                     {:key :id}))))))
 
 (defn long-term-item-view
@@ -287,7 +288,8 @@
       (dom/div #js {:className "memory"}
                (dom/h2 nil "Long-term memory (percepts)")
                (apply dom/div #js {:className "contents"}
-                      (om/build-all long-term-item-view (:percepts ltm)
+                      (om/build-all long-term-item-view
+                                    (sort-by :ltm-entry (:percepts ltm))
                                     {:key :id}))))))
 
 (defn fake-saw-face
