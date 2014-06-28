@@ -44,7 +44,7 @@ Most dependencies are available on clojars or maven central and no special actio
 There are two dependencies however, that need to be manually installed
 
 * https://github.com/davesnowdon/emotions-clojure
-* https://github.com/davesnowdon/naojure NOTE: The version of naojure currently available on github is not suitable since it uses the old 1.14 Aldebaran Java API. The new API is unfortunately only available under NDA and this prevents me from publishing the current version of naojure. For the moment developers on Aldebaran's NAO developer program should contact me directly to obtain a version of naojure that works with the latest API.
+* https://github.com/davesnowdon/naojure
 
 Use <pre>lein install</pre> to install these in your local repository.
 
