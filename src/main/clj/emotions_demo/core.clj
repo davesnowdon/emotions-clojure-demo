@@ -183,6 +183,22 @@
                                                  time-since-update)
                        {valence :valence arousal :arousal}
                        (sv->valence+arousal control-points new-sv)]
+
+                   ;; if robot connected then inject valence & arousal
+                   ;; into ALmemory
+                   (if @robot-atom
+                     (do
+                       (println "Writing valence ("
+                                valence
+                                ") & arousal ("
+                                arousal
+                                ") to ALMemory")
+                       (nao/set-memory-value
+                        @robot-atom
+                        "Emotion/Current"
+                        (java.util.ArrayList.
+                         (list (Float. valence) (Float. arousal))))))
+
                    ;; (pprint new-motivations)
 
                    ;;(println "Before learn")
@@ -469,7 +485,7 @@
           foot-chan (chan)
           face-chan (chan)
           robot
-          (-> (nao/make-robot hostname 9559 [:motion :tts])
+          (-> (nao/make-robot hostname 9559 [:motion :tts :memory])
               (nao/add-event-chan "FrontTactilTouched" head-chan)
               (nao/add-event-chan "MiddleTactilTouched" head-chan)
               (nao/add-event-chan "RearTactilTouched" back-head-chan)
