@@ -25,6 +25,8 @@
 
 (def long-term-memory (atom (long-term-memory-init)))
 
+(def robot-atom (atom nil))
+
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
 
@@ -244,16 +246,19 @@
 
 (defn reaction-process
   "Triggers a reaction and the resulting percept when a predicate is met"
-  [robot percept-chan predicate reaction percept]
+  [robot-atom percept-chan predicate reaction percept]
   (let [state-chan (chan)
         reaction-complete-chan (chan)]
     (go (while true
           (let [state (<! state-chan)]
             (if (predicate state)
-              (reaction robot state reaction-complete-chan)))))
+              (if @robot-atom
+                (reaction @robot-atom state reaction-complete-chan)
+                (>! reaction-complete-chan :done))))))
     (go (while true
           (let [done (<! reaction-complete-chan)]
-            (>! percept-chan (percept done)))))
+            (>! percept-chan
+                (assoc (percept done) :is-action true)))))
     state-chan))
 
 (defn react-angrily?
@@ -276,8 +281,8 @@
    :other-agents #{}})
 
 (defn anger-management
-  [robot percept-chan]
-  (reaction-process robot percept-chan
+  [robot-atom percept-chan]
+  (reaction-process robot-atom percept-chan
                     react-angrily? anger-reaction anger-reaction-percept))
 
 (defn react-lonely?
@@ -301,8 +306,8 @@
    :other-agents #{}})
 
 (defn loneliness-management
-  [robot percept-chan]
-  (reaction-process robot percept-chan
+  [robot-atom percept-chan]
+  (reaction-process robot-atom percept-chan
                     react-lonely? lonely-reaction lonely-reaction-percept))
 
 (defn react-bored?
@@ -345,8 +350,8 @@
    :other-agents #{}})
 
 (defn fear-management
-  [robot percept-chan]
-  (reaction-process robot percept-chan
+  [robot-atom percept-chan]
+  (reaction-process robot-atom percept-chan
                     react-scared? fear-reaction fear-reaction-percept))
 
 (defn react-happy?
@@ -369,13 +374,13 @@
    :other-agents #{}})
 
 (defn delight-management
-  [robot percept-chan]
-  (reaction-process robot percept-chan
+  [robot-atom percept-chan]
+  (reaction-process robot-atom percept-chan
                     react-happy? delight-reaction delight-reaction-percept))
 
 (defn boredom-management
-  [robot percept-chan]
-  (reaction-process robot percept-chan
+  [robot-atom percept-chan]
+  (reaction-process robot-atom percept-chan
                     react-bored? bored-reaction bored-reaction-percept))
 
 (defn head-touch-process
@@ -480,17 +485,22 @@
       (hand-touch-process hand-chan percept-chan)
       (foot-touch-process foot-chan percept-chan)
       (face-detected-process face-chan percept-chan)
-      (add-state-listener internal-clients-atom
-                          (anger-management robot percept-chan))
-      (add-state-listener internal-clients-atom
-                          (loneliness-management robot percept-chan))
-      (add-state-listener internal-clients-atom
-                          (boredom-management robot percept-chan))
-      (add-state-listener internal-clients-atom
-                          (fear-management robot percept-chan))
-      (add-state-listener internal-clients-atom
-                          (delight-management robot percept-chan))
+      (reset! robot-atom robot)
       )))
+
+(defn start-reactions
+  [percept-chan]
+  (do
+    (add-state-listener internal-clients-atom
+                        (anger-management robot-atom percept-chan))
+    (add-state-listener internal-clients-atom
+                        (loneliness-management robot-atom percept-chan))
+    (add-state-listener internal-clients-atom
+                        (boredom-management robot-atom percept-chan))
+    (add-state-listener internal-clients-atom
+                        (fear-management robot-atom percept-chan))
+    (add-state-listener internal-clients-atom
+                        (delight-management robot-atom percept-chan))))
 
 (defn start-emotions
   [percept-chan state-chan]
@@ -498,7 +508,8 @@
     (state-emitter state-chan internal-clients-atom)
     (state-display display-chan)
     (add-state-listener internal-clients-atom display-chan)
-    (emotions-process percept-chan state-chan)))
+    (emotions-process percept-chan state-chan)
+    (start-reactions percept-chan)))
 
 (defn run-demo-with-robot
   [hostname]
