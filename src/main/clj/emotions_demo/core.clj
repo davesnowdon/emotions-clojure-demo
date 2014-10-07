@@ -37,31 +37,33 @@
   [{:id :phys-anger :name "anger" :layer :physical
     :valence -0.7 :arousal 0.7
     :desire 0.0 :decay-rate -0.02 :max-delta 1.0
-    :learning-window 30000}
-   {:id :phys-hunger :name "hunger" :layer :physical
-    :valence 0.0 :arousal 0.5
-    :desire 0.0 :decay-rate 0.0 :max-delta 1.0
-    :learning-window (* 2 60 60 1000)}
-   {:id :phys-fear :name "fear" :layer :physical
-    :valence -0.9 :arousal 0.2
-    :desire 0.0 :decay-rate -0.2 :max-delta 1.0
-    :learning-window 30000}
-   {:id :saf-bored :name "bored" :layer :safety
+    :learning-window 30000
+    :description "gets irritated if frustrated in achieving an action"}
+   {:id :saf-boredom :name "boredom" :layer :safety
     :valence -0.1 :arousal -0.4
     :desire 0.0 :decay-rate 0.01 :max-delta 0.3
-    :learning-window (* 5 60 1000)}
+    :learning-window (* 5 60 1000)
+    :description "proactively look for something if insufficient stimulus"}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
     :desire 0.0 :decay-rate 0.0 :max-delta 0.8
-    :learning-window 60000}
-   {:id :saf-playful :name "playful" :layer :safety
-    :valence 0.6 :arousal 0.9
-    :desire 0.0 :decay-rate 0.005 :max-delta 0.3
-    :learning-window (* 30 60 1000)}
-   {:id :soc-lonely :name "lonely" :layer :social
+    :learning-window 60000
+    :description "try and seek out things (i.e. friends) with positive associations"}
+   {:id :phys-fear :name "fear" :layer :physical
+    :valence -0.9 :arousal 0.2
+    :desire 0.0 :decay-rate -0.2 :max-delta 1.0
+    :learning-window 30000
+    :description "try and avoid dangerous situations / obstacles / percepts with negative associations"}
+   {:id :phys-hunger :name "hunger" :layer :physical
+    :valence 0.0 :arousal 0.5
+    :desire 0.0 :decay-rate 0.0 :max-delta 1.0
+    :learning-window (* 2 60 60 1000)
+    :description "monitor battery level"}
+   {:id :soc-sociable :name "sociable" :layer :social
     :valence -0.6 :arousal -0.6
     :desire 0.0 :decay-rate 0.005 :max-delta 0.3
-    :learning-window (* 60 60 1000)}
+    :learning-window (* 60 60 1000)
+    :description "try to find people to interact with"}
    ])
 
 (def demo-control-points
@@ -78,16 +80,16 @@
     {:phys-fear 0.9}}
 
    {:valence 0.0 :arousal 0.0 :expression-vector
-    {:saf-bored 0.5}}
+    {:saf-boredom 0.5}}
 
    {:valence 1.0 :arousal 0.0 :expression-vector
     {:saf-delight 0.9}}
 
    {:valence -1.0 :arousal -1.0 :expression-vector
-    {:soc-lonely 0.6}}
+    {:soc-sociable 0.6}}
 
    {:valence 0.0 :arousal -1.0 :expression-vector
-    {:saf-bored 0.5}}
+    {:saf-boredom 0.5}}
 
    {:valence 1.0 :arousal -1.0 :expression-vector
     {}}
@@ -99,26 +101,26 @@
    {:name "Recognised"
     :other-agents #{:linus_torvalds}
     :satisfaction-vector {:phys-fear 0.1
-                          :saf-bored -0.6
+                          :saf-boredom -0.6
                           :saf-delight -0.4
                           :saf-playful -0.1
-                          :soc-lonely -0.2}}
+                          :soc-sociable -0.2}}
    :steve_ballmer
    {:name "Recognised"
     :other-agents #{:steve_ballmer}
     :satisfaction-vector {:phys-anger 0.1
                           :phys-fear 0.8
-                          :saf-bored -0.5
+                          :saf-boredom -0.5
                           :saf-playful -0.1
-                          :soc-lonely -0.1}}
+                          :soc-sociable -0.1}}
    :nao_robot
    {:name "Recognised"
     :other-agents #{:nao_robot}
     :satisfaction-vector {:phys-fear -0.2
-                          :saf-bored -0.6
+                          :saf-boredom -0.6
                           :saf-delight -0.6
                           :saf-playful -0.2
-                          :soc-lonely -0.3}}
+                          :soc-sociable -0.3}}
    })
 
 ;; TODO percepts
@@ -130,7 +132,7 @@
 ;; - do hello
 ;; - do scared
 ;; - do happy
-;; - need a bored behaviour
+;; - need a boredom behaviour
 
 (defn stm-add-learn-and-expire
   "Add new percepts to short-term memory and expire old ones"
@@ -291,7 +293,7 @@
   [done-signal]
   {:name "Got angry"
    :satisfaction-vector {:phys-anger -0.5
-                         :saf-bored -0.3}
+                         :saf-boredom -0.3}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
@@ -301,22 +303,22 @@
   (reaction-process robot-atom percept-chan
                     react-angrily? anger-reaction anger-reaction-percept))
 
-(defn react-lonely?
+(defn react-sociable?
   [state]
-  (> (get-in state [:sv :soc-lonely] 0.0) 0.5))
+  (> (get-in state [:sv :soc-sociable] 0.0) 0.5))
 
-(defn lonely-reaction
+(defn sociable-reaction
   [robot state complete-chan]
   (->
    (nao/say robot "Is anyone there? I'm feeling lonely.")
    (nao/future-callback-wrapper
     (nao/callback->channel complete-chan))))
 
-(defn lonely-reaction-percept
+(defn sociable-reaction-percept
   [done-signal]
   {:name "Very lonely"
-   :satisfaction-vector {:soc-lonely -0.4
-                         :saf-bored 0.1}
+   :satisfaction-vector {:soc-sociable -0.4
+                         :saf-boredom 0.1}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
@@ -324,13 +326,13 @@
 (defn loneliness-management
   [robot-atom percept-chan]
   (reaction-process robot-atom percept-chan
-                    react-lonely? lonely-reaction lonely-reaction-percept))
+                    react-sociable? sociable-reaction sociable-reaction-percept))
 
-(defn react-bored?
+(defn react-boredom?
   [state]
-  (> (get-in state [:sv :saf-bored] 0.0) 0.75))
+  (> (get-in state [:sv :saf-boredom] 0.0) 0.75))
 
-(defn bored-reaction
+(defn boredom-reaction
   [robot state complete-chan]
   (if (> (rand) 0.5)
     (->
@@ -339,11 +341,11 @@
       (nao/callback->channel complete-chan)))
     (nao/run-behaviour robot "dsnowdon-hello" complete-chan)))
 
-(defn bored-reaction-percept
+(defn boredom-reaction-percept
   [done-signal]
-  {:name "Bored"
-   :satisfaction-vector {:soc-lonely 0.05
-                         :saf-bored -0.1}
+  {:name "Boredom"
+   :satisfaction-vector {:soc-sociable 0.05
+                         :saf-boredom -0.1}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
@@ -360,7 +362,7 @@
   [done-signal]
   {:name "Got scared"
    :satisfaction-vector {:phys-fear -0.2
-                         :saf-bored -0.5}
+                         :saf-boredom -0.5}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
@@ -397,7 +399,7 @@
 (defn boredom-management
   [robot-atom percept-chan]
   (reaction-process robot-atom percept-chan
-                    react-bored? bored-reaction bored-reaction-percept))
+                    react-boredom? boredom-reaction boredom-reaction-percept))
 
 (defn head-touch-process
   [event-chan percept-chan]
@@ -407,7 +409,7 @@
                (>! percept-chan
                    {:name "Head touched"
                     :satisfaction-vector {:phys-anger 0.2
-                                          :saf-bored -0.3}
+                                          :saf-boredom -0.3}
                     :timestamp (t/now)
                     :locations @location
                     :other-agents #{:unknown}}))
@@ -421,7 +423,7 @@
                (>! percept-chan
                    {:name "Back Head touched"
                     :satisfaction-vector {:phys-fear 1.0
-                                          :saf-bored -0.3}
+                                          :saf-boredom -0.3}
                     :timestamp (t/now)
                     :locations @location
                     :other-agents #{:unknown}}))
@@ -435,8 +437,8 @@
                (>! percept-chan
                    {:name "Hand touched"
                     :satisfaction-vector {:phys-anger -0.2
-                                          :saf-bored -0.2
-                                          :soc-lonely -0.3}
+                                          :saf-boredom -0.2
+                                          :soc-sociable -0.3}
                     :timestamp (t/now)
                     :locations @location
                     :other-agents #{:unknown}}))
@@ -450,7 +452,7 @@
                (>! percept-chan
                    {:name "Foot touched"
                     :satisfaction-vector {:phys-anger -0.1
-                                          :saf-bored -0.2
+                                          :saf-boredom -0.2
                                           :saf-playful 0.2}
                     :timestamp (t/now)
                     :locations @location
