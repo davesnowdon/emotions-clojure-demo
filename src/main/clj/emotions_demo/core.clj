@@ -39,7 +39,7 @@
     :desire 0.0 :decay-rate -0.02 :max-delta 1.0
     :learning-window 30000
     :description "gets irritated if frustrated in achieving an action"
-    :attractors [(proportional-attractor -0.75 0.75 1.0)]}
+    :attractors [(proportional-attractor -0.75 0.75 2.0)]}
    {:id :saf-boredom :name "boredom" :layer :safety
     :valence -0.1 :arousal -0.4
     :desire 0.0 :decay-rate 0.01 :max-delta 0.3
@@ -48,7 +48,7 @@
     :attractors [(proportional-attractor -0.25 -0.75 1.0)]}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
-    :desire 0.0 :decay-rate 0.0 :max-delta 0.8
+    :desire 0.5 :decay-rate 0.0 :max-delta 0.8
     :learning-window 60000
     :description "try and seek out things (i.e. friends) with positive associations"
     :attractors [(inverse-attractor 1.0 0.75 1.0)
@@ -70,8 +70,7 @@
     :desire 0.0 :decay-rate 0.005 :max-delta 0.3
     :learning-window (* 60 60 1000)
     :description "try to find people to interact with"
-    :attractors [(inverse-attractor 1.0 0.75 0.5)
-                 (proportional-attractor -0.75 -0.75 0.5)]}
+    :attractors [(proportional-attractor -0.75 -0.75 0.5)]}
    ])
 
 (def demo-agents
@@ -165,8 +164,11 @@
                                                  motivations
                                                  percepts
                                                  time-since-update)
+                       att (get-attractors new-motivations new-sv)
                        {valence :valence arousal :arousal}
-                       (sv->valence+arousal motivations new-sv)]
+                       (sv->valence+arousal new-motivations new-sv)]
+
+                   (pprint att)
 
                    ;; if robot connected then inject valence & arousal
                    ;; into ALmemory
