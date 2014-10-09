@@ -38,61 +38,40 @@
     :valence -0.7 :arousal 0.7
     :desire 0.0 :decay-rate -0.02 :max-delta 1.0
     :learning-window 30000
-    :description "gets irritated if frustrated in achieving an action"}
+    :description "gets irritated if frustrated in achieving an action"
+    :attractors [(proportional-attractor -0.75 0.75 1.0)]}
    {:id :saf-boredom :name "boredom" :layer :safety
     :valence -0.1 :arousal -0.4
     :desire 0.0 :decay-rate 0.01 :max-delta 0.3
     :learning-window (* 5 60 1000)
-    :description "proactively look for something if insufficient stimulus"}
+    :description "proactively look for something if insufficient stimulus"
+    :attractors [(proportional-attractor -0.25 -0.75 1.0)]}
    {:id :saf-delight :name "delight" :layer :safety
     :valence 0.7 :arousal 0.7
     :desire 0.0 :decay-rate 0.0 :max-delta 0.8
     :learning-window 60000
-    :description "try and seek out things (i.e. friends) with positive associations"}
+    :description "try and seek out things (i.e. friends) with positive associations"
+    :attractors [(inverse-attractor 1.0 0.75 1.0)
+                 (proportional-attractor -0.75 -0.75 1.0)]}
    {:id :phys-fear :name "fear" :layer :physical
     :valence -0.9 :arousal 0.2
     :desire 0.0 :decay-rate -0.2 :max-delta 1.0
     :learning-window 30000
-    :description "try and avoid dangerous situations / obstacles / percepts with negative associations"}
+    :description "try and avoid dangerous situations / obstacles / percepts with negative associations"
+    :attractors [(proportional-attractor -1.0 0.0 1.0)]}
    {:id :phys-hunger :name "hunger" :layer :physical
     :valence 0.0 :arousal 0.5
     :desire 0.0 :decay-rate 0.0 :max-delta 1.0
     :learning-window (* 2 60 60 1000)
-    :description "monitor battery level"}
+    :description "monitor battery level"
+    :attractors []}
    {:id :soc-sociable :name "sociable" :layer :social
     :valence -0.6 :arousal -0.6
     :desire 0.0 :decay-rate 0.005 :max-delta 0.3
     :learning-window (* 60 60 1000)
-    :description "try to find people to interact with"}
-   ])
-
-(def demo-control-points
-  [{:valence -1.0 :arousal 1.0 :expression-vector
-    {:phys-anger 0.7 :phys-fear 0.8}}
-
-   {:valence 0.0 :arousal 1.0 :expression-vector
-    {:phys-hunger 0.5 :saf-playful 0.9}}
-
-   {:valence 1.0 :arousal 1.0 :expression-vector
-    {:saf-delight 0.7 :saf-playful 0.7}}
-
-   {:valence -1.0 :arousal 0.0 :expression-vector
-    {:phys-fear 0.9}}
-
-   {:valence 0.0 :arousal 0.0 :expression-vector
-    {:saf-boredom 0.5}}
-
-   {:valence 1.0 :arousal 0.0 :expression-vector
-    {:saf-delight 0.9}}
-
-   {:valence -1.0 :arousal -1.0 :expression-vector
-    {:soc-sociable 0.6}}
-
-   {:valence 0.0 :arousal -1.0 :expression-vector
-    {:saf-boredom 0.5}}
-
-   {:valence 1.0 :arousal -1.0 :expression-vector
-    {}}
+    :description "try to find people to interact with"
+    :attractors [(inverse-attractor 1.0 0.75 0.5)
+                 (proportional-attractor -0.75 -0.75 0.5)]}
    ])
 
 (def demo-agents
@@ -153,13 +132,16 @@
     ;; long-term-memory-add-percept and simply returns ltm
     (reduce long-term-memory-add-percept ltm significant-percepts)))
 
+(defn motivations-without-attractors
+  [motivations]
+  (map #(dissoc % :attractors) motivations))
+
 (defn emotions-process
   "Loop that receives percepts and updates the emotional model"
   [percept-chan state-chan]
   (let [initial-sv (motivations->sv demo-motivations)
         layers demo-layers
-        layer-multiplers demo-layer-multipliers
-        control-points demo-control-points]
+        layer-multiplers demo-layer-multipliers]
     (go-loop [sv initial-sv
               motivations demo-motivations
               percepts []
@@ -184,7 +166,7 @@
                                                  percepts
                                                  time-since-update)
                        {valence :valence arousal :arousal}
-                       (sv->valence+arousal control-points new-sv)]
+                       (sv->valence+arousal motivations new-sv)]
 
                    ;; if robot connected then inject valence & arousal
                    ;; into ALmemory
@@ -232,7 +214,8 @@
                                    :valence valence
                                    :arousal arousal
                                    :percepts percepts
-                                   :motivations new-motivations
+                                   :motivations
+                                   (motivations-without-attractors new-motivations)
                                    :stm (:stm @short-term-memory)
                                    :ltm @long-term-memory
                                    :location @location
