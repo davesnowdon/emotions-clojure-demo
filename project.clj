@@ -1,4 +1,4 @@
-(defproject emotions-demo "0.1.0"
+(defproject emotions-demo "0.2.0"
   :description "Demonstrate use of core.aync and emotions framework with NAO robot"
   :url "https://github.com/davesnowdon/emotions-clojure-demo"
   :license {:name "Eclipse Public License"
@@ -9,15 +9,17 @@
   :source-paths ["src" "src/main/clj"]
   :test-paths ["test" "src/test/clj"]
 
-  :dependencies [[org.clojure/clojure "1.5.1"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
                  [compojure "1.1.6"]
                  [jarohen/chord "0.2.2"]
                  [jarohen/nomad "0.6.3"]
                  [ring/ring-core "1.2.1"]
                  [javax.servlet/servlet-api "2.5"]
+                 [org.clojure/core.async "0.2.374"]
                  [hiccup "1.0.5"]
                  [emotions "0.2.1"]
-                 [naojure "0.2.4"]
+                 ;[naojure "0.2.4"]
+                 [com.aldebaran/java-naoqi "2.1.4"]
 
                  [org.clojure/clojurescript "0.0-2156"]
                  [org.clojure/tools.reader "0.8.3"]

@@ -41,12 +41,22 @@ Dependencies
 
 Most dependencies are available on clojars or maven central and no special action is required since leiningen will fetch them automatically.
 
-There are two dependencies however, that need to be manually installed
+There two dependencies however, that need to be manually installed
 
-* https://github.com/davesnowdon/emotions-clojure
-* https://github.com/davesnowdon/naojure
+## emotions-clojure
 
-Use <pre>lein install</pre> to install these in your local repository.
+https://github.com/davesnowdon/emotions-clojure
+
+Use <pre>lein install</pre> to install this in your local repository.
+
+
+## Packaging the Aldebaran Java SDK
+You need to install the Aldebaran jar file for your platform on locally.  You can use the
+[lein-localrepo](https://github.com/kumarshantanu/lein-localrepo) plug
+in. Run:
+
+    lein localrepo install java-naoqi-sdk-2.1.4.13-mac64.jar com.aldebaran/java-naoqi 2.1.4
+
 
 TODO
 ====

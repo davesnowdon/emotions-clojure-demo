@@ -1,11 +1,14 @@
 (ns emotions-demo.core
   (:require [clojure.core.async :as async
-             :refer [<! >! <!! timeout chan alt! put! go go-loop]]
+             :refer [<! >! <!! timeout chan alt! alts! put! go go-loop]]
             [clojure.string :refer [trim]]
             [clojure.pprint :refer [pprint]]
             [clj-time.core :as t]
             [clj-time.format :as tf]
-            [naojure.core :as nao]
+
+            ;[naojure.core :as nao]
+            [emotions-demo.nao :as nao]
+
             [emotions.core :refer :all]
             [emotions.util :refer [float= seconds-diff]]))
 
@@ -25,7 +28,114 @@
 
 (def long-term-memory (atom (long-term-memory-init)))
 
-(def robot-atom (atom nil))
+(def interesting-words {"rommie" {:saf-delight 0.5
+                                  :saf-boredom -0.3}
+                        "robot" {:saf-delight 0.2
+                                 :saf-boredom -0.2}
+                        "emotions" {:saf-delight 0.1
+                                    :saf-boredom -0.1}
+                        "terminator" {:phys-fear 0.5
+                                      :saf-boredom -0.6}
+                        "skynet" {:phys-fear 0.6
+                                  :saf-boredom -0.7}
+                        "intelligence" {:saf-boredom -0.2}
+                        "stand up" {:phys-anger 0.2
+                                    :saf-boredom -0.3}
+                        "sit down" {:phys-anger 0.2
+                                    :saf-boredom -0.3}
+                        })
+
+(def bored-standing-animations [])
+
+(def bored-sitting-animations ["System/animations/Sit/Waiting/Relaxation_3"
+                               "System/animations/Sit/Waiting/LookHand_1"
+                               "System/animations/Sit/Waiting/KnockKnee_1"
+                               "System/animations/Sit/Waiting/Bored_1"
+                               "System/animations/Sit/Waiting/ScratchHead_1"
+                               "System/animations/Sit/Waiting/Think_2"
+                               "System/animations/Sit/Waiting/ScratchLeg_1"
+                               "System/animations/Sit/Waiting/PoorlySeated_1"
+                               "System/animations/Sit/Waiting/LookHand_1"
+                               "System/animations/Sit/Reactions/ShakeBody_2"
+                               "System/animations/Sit/Waiting/ScratchBack_1"
+                               ])
+
+(defn bored-animations
+  []
+  (if (nao/robot-standing?)
+    bored-standing-animations
+    bored-sitting-animations))
+
+(def really-bored-standing-animations [])
+
+(def really-bored-sitting-animations ["System/animations/Sit/Waiting/Puppet_1"
+                                      "System/animations/Sit/Emotions/Neutral/Sneeze_1"
+                                      "System/animations/Sit/Waiting/Yawn_1"
+                                      "System/animations/Sit/Waiting/Rest_1"])
+
+(defn really-bored-animations
+  []
+  (if (nao/robot-standing?)
+    really-bored-standing-animations
+    really-bored-sitting-animations))
+
+(def angry-standing-animations [])
+
+(def angry-sitting-animations ["System/animations/Sit/Emotions/Negative/Angry_1"
+                               "System/animations/Sit/Emotions/Negative/Frustrated_1"])
+
+(defn angry-animations
+  []
+  (if (nao/robot-standing?)
+    angry-standing-animations
+    angry-sitting-animations))
+
+(def happy-standing-animations [])
+
+(def happy-sitting-animations ["System/animations/Sit/Emotions/Positive/Happy_1"
+                               "System/animations/Sit/Emotions/Positive/Happy_2"
+                               "System/animations/Sit/Emotions/Positive/Happy_3"])
+
+(defn happy-animations
+  []
+  (if (nao/robot-standing?)
+    happy-standing-animations
+    happy-sitting-animations))
+
+(def scared-standing-animations [])
+
+(def scared-sitting-animations ["System/animations/Sit/Emotions/Negative/Fear_1"
+                                "System/animations/Sit/Emotions/Negative/Surprise_1"
+                                ])
+
+(defn scared-animations
+  []
+  (if (nao/robot-standing?)
+    scared-standing-animations
+    scared-sitting-animations))
+
+(def neutral-standing-animations [])
+
+(def neutral-sitting-animations [])
+
+(defn neutral-animations
+  []
+  (if (nao/robot-standing?)
+    neutral-standing-animations
+    neutral-sitting-animations))
+
+(def seen-someone-standing-animations [])
+
+(def seen-someone-sitting-animations ["System/animations/Sit/Emotions/Neutral/AskForAttention_1"
+                                      "System/animations/Sit/Emotions/Neutral/AskForAttention_2"
+                                      "System/animations/Sit/Emotions/Neutral/AskForAttention_3"])
+
+(defn seen-someone-animations
+  []
+  (if (nao/robot-standing?)
+    seen-someone-standing-animations
+    seen-someone-sitting-animations))
+
 
 ; layers from bottom to top
 (def demo-layers [:physical :safety :social :skill :contribution])
@@ -172,7 +282,7 @@
 
                    ;; if robot connected then inject valence & arousal
                    ;; into ALmemory
-                   (if @robot-atom
+                   (if (nao/connected?)
                      (do
                        (println "Writing valence ("
                                 valence
@@ -180,7 +290,6 @@
                                 arousal
                                 ") to ALMemory")
                        (nao/set-memory-value
-                        @robot-atom
                         "Emotion/Current"
                         (java.util.ArrayList.
                          (list (Float. valence) (Float. arousal))))))
@@ -249,14 +358,14 @@
 
 (defn reaction-process
   "Triggers a reaction and the resulting percept when a predicate is met"
-  [robot-atom percept-chan predicate reaction percept]
+  [percept-chan predicate reaction percept]
   (let [state-chan (chan)
         reaction-complete-chan (chan)]
     (go (while true
           (let [state (<! state-chan)]
             (if (predicate state)
-              (if @robot-atom
-                (reaction @robot-atom state reaction-complete-chan)
+              (if (nao/connected?)
+                (reaction state reaction-complete-chan)
                 (>! reaction-complete-chan :done))))))
     (go (while true
           (let [done (<! reaction-complete-chan)]
@@ -269,10 +378,8 @@
   (> (get-in state [:sv :phys-anger] 0.0) 0.75))
 
 (defn anger-reaction
-  [robot state complete-chan]
-  (if (> (rand) 0.5)
-    (nao/run-behaviour robot "dsnowdon-angry" complete-chan)
-    (nao/run-behaviour robot "dsnowdon-exterminate" complete-chan)))
+  [state complete-chan]
+  (nao/run-behaviour (rand-nth (angry-animations)) complete-chan))
 
 (defn anger-reaction-percept
   [done-signal]
@@ -284,8 +391,8 @@
    :other-agents #{}})
 
 (defn anger-management
-  [robot-atom percept-chan]
-  (reaction-process robot-atom percept-chan
+  [percept-chan]
+  (reaction-process percept-chan
                     react-angrily? anger-reaction anger-reaction-percept))
 
 (defn react-sociable?
@@ -293,55 +400,52 @@
   (> (get-in state [:sv :soc-sociable] 0.0) 0.5))
 
 (defn sociable-reaction
-  [robot state complete-chan]
-  (->
-   (nao/say robot "Is anyone there? I'm feeling lonely.")
-   (nao/future-callback-wrapper
-    (nao/callback->channel complete-chan))))
+  [state complete-chan]
+  (nao/say "Is anyone there? I'm feeling lonely." complete-chan))
 
 (defn sociable-reaction-percept
   [done-signal]
   {:name "Very lonely"
-   :satisfaction-vector {:soc-sociable -0.4
+   :satisfaction-vector {:soc-sociable -0.5
                          :saf-boredom 0.1}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
 
 (defn loneliness-management
-  [robot-atom percept-chan]
-  (reaction-process robot-atom percept-chan
+  [percept-chan]
+  (reaction-process percept-chan
                     react-sociable? sociable-reaction sociable-reaction-percept))
 
 (defn react-boredom?
   [state]
-  (> (get-in state [:sv :saf-boredom] 0.0) 0.75))
+  (> (get-in state [:sv :saf-boredom] 0.0) 0.5))
 
 (defn boredom-reaction
-  [robot state complete-chan]
-  (if (> (rand) 0.5)
-    (->
-     (nao/say robot "Ho hum! I'm bored.")
-     (nao/future-callback-wrapper
-      (nao/callback->channel complete-chan)))
-    (nao/run-behaviour robot "dsnowdon-hello" complete-chan)))
+  [state complete-chan]
+  (nao/run-behaviour (rand-nth (bored-animations)) complete-chan))
 
 (defn boredom-reaction-percept
   [done-signal]
   {:name "Boredom"
    :satisfaction-vector {:soc-sociable 0.05
-                         :saf-boredom -0.1}
+                         :saf-boredom -0.2}
    :timestamp (t/now)
    :locations @location
    :other-agents #{}})
+
+(defn boredom-management
+  [percept-chan]
+  (reaction-process percept-chan
+                    react-boredom? boredom-reaction boredom-reaction-percept))
 
 (defn react-scared?
   [state]
   (> (get-in state [:sv :phys-fear] 0.0) 0.6))
 
 (defn fear-reaction
-  [robot state complete-chan]
-  (nao/run-behaviour robot "dsnowdon-scared" complete-chan))
+  [state complete-chan]
+  (nao/run-behaviour (rand-nth (scared-animations)) complete-chan))
 
 (defn fear-reaction-percept
   [done-signal]
@@ -353,8 +457,8 @@
    :other-agents #{}})
 
 (defn fear-management
-  [robot-atom percept-chan]
-  (reaction-process robot-atom percept-chan
+  [percept-chan]
+  (reaction-process percept-chan
                     react-scared? fear-reaction fear-reaction-percept))
 
 (defn react-happy?
@@ -364,8 +468,8 @@
    (> (get-in state [:sv :saf-playful] 0.0) 0.5)))
 
 (defn delight-reaction
-  [robot state complete-chan]
-  (nao/run-behaviour robot "dsnowdon-happy" complete-chan))
+  [state complete-chan]
+  (nao/run-behaviour (rand-nth (happy-animations)) complete-chan))
 
 (defn delight-reaction-percept
   [done-signal]
@@ -377,14 +481,9 @@
    :other-agents #{}})
 
 (defn delight-management
-  [robot-atom percept-chan]
-  (reaction-process robot-atom percept-chan
+  [percept-chan]
+  (reaction-process percept-chan
                     react-happy? delight-reaction delight-reaction-percept))
-
-(defn boredom-management
-  [robot-atom percept-chan]
-  (reaction-process robot-atom percept-chan
-                    react-boredom? boredom-reaction boredom-reaction-percept))
 
 (defn head-touch-process
   [event-chan percept-chan]
@@ -444,11 +543,100 @@
                     :other-agents #{:unknown}}))
              (recur (<! event-chan)))))
 
-(defn face-detected-process
+(defn human-tracking-process
+  [event-chan percept-chan]
+  (go-loop [ignored (<! event-chan)]
+    (do
+      (if (> (nao/people-count) 0)
+        (>! percept-chan
+            {:name "Humans present"
+             :satisfaction-vector {:soc-sociable -0.2
+                                   :saf-boredom -0.2
+                                   :saf-playful 0.2}
+             :timestamp (t/now)
+             :locations @location
+             :other-agents #{:unknown}
+             :people-count (nao/people-count)})
+        (>! percept-chan
+            {:name "No humans found"
+             :satisfaction-vector {:soc-sociable 0.1
+                                   :saf-boredom 0.2
+                                   :saf-playful -0.2}
+             :timestamp (t/now)
+             :locations @location
+             :other-agents #{:unknown}}))
+      (recur (<! event-chan)))))
+
+(defn stimulus-detected-process
+  [event-chan percept-chan]
+  (go-loop [[event value] (<! event-chan)]
+    (do
+      (>! percept-chan
+          {:name "Awareness"
+           :satisfaction-vector {:soc-sociable -0.2
+                                 :saf-boredom -0.1}
+           :timestamp (t/now)
+           :locations @location
+           :other-agents #{:unknown}})
+      (recur (<! event-chan)))))
+
+;; TODO do something with this
+(defn posture-change-process
   [event-chan percept-chan]
   (go (while true
         (let [[event value] (<! event-chan)]
-          (println "Face" value)))))
+          (println "Posture changed" value)))))
+
+;; TODO do we get a float value for darkness detection?
+(defn darkness-process
+  [event-chan percept-chan]
+  (go-loop [[event value] (<! event-chan)]
+    (do
+      (if (float= 1.0 value)
+        (>! percept-chan
+            {:name "Darkness"
+             :satisfaction-vector {:phys-fear 0.5}
+             :timestamp (t/now)
+             :locations @location
+             :other-agents #{:unknown}}))
+      (recur (<! event-chan)))))
+
+(defn process-recognised-word-event
+  [value]
+  (let [[word confidence] value]
+    (if (> confidence 0.5)
+      (-> word
+          (.replace "<...>" "")
+          (.trim)))))
+
+(defn word-recognised-process
+  [event-chan percept-chan]
+  (go-loop [[event value] (<! event-chan)]
+    (do
+      (if-let [word (process-recognised-word-event value)]
+        (if (contains? interesting-words word)
+          (>! percept-chan
+              {:name "Word recognised"
+               :satisfaction-vector (interesting-words word)
+               :timestamp (t/now)
+               :locations @location
+               :other-agents #{:unknown}
+               :word word})))
+      (recur (<! event-chan)))))
+
+(defn speech-detected-process
+  [event-chan percept-chan]
+  (go-loop [[event value] (<! event-chan)]
+    (do
+      (if (float= 1.0 value)
+        (>! percept-chan
+            {:name "Speech detected"
+             :satisfaction-vector {:soc-sociable -0.2
+                                   :saf-boredom -0.01}
+             :timestamp (t/now)
+             :locations @location
+             :other-agents #{:unknown}}))
+      (recur (<! event-chan)))))
 
 (defn add-state-listener
   [clients-atom listener-chan]
@@ -470,40 +658,56 @@
           back-head-chan (chan)
           hand-chan (chan)
           foot-chan (chan)
-          face-chan (chan)
-          robot
-          (-> (nao/make-robot hostname 9559 [:motion :tts :memory])
-              (nao/add-event-chan "FrontTactilTouched" head-chan)
-              (nao/add-event-chan "MiddleTactilTouched" head-chan)
-              (nao/add-event-chan "RearTactilTouched" back-head-chan)
-              (nao/add-event-chan "HandLeftBackTouched" hand-chan)
-              (nao/add-event-chan "HandRightBackTouched" hand-chan)
-              (nao/add-event-chan "LeftBumperPressed" foot-chan)
-              (nao/add-event-chan "RightBumperPressed" foot-chan)
-              (nao/add-event-chan "FaceDetected" face-chan))]
-      (nao/set-volume robot (Float. 1.0))
-      (nao/say robot "I'm starting to feel quite emotional")
+          human-tracking-chan (chan)
+          stimulus-chan (chan)
+          posture-chan (chan)
+          darkness-chan (chan)
+          word-recognised-chan (chan)
+          speech-detected-chan (chan)]
+      (nao/connect hostname)
+      (nao/start-listening (keys interesting-words))
+      (nao/add-event-chan "FrontTactilTouched" head-chan)
+      (nao/add-event-chan "MiddleTactilTouched" head-chan)
+      (nao/add-event-chan "RearTactilTouched" back-head-chan)
+      (nao/add-event-chan "HandLeftBackTouched" hand-chan)
+      (nao/add-event-chan "HandRightBackTouched" hand-chan)
+      (nao/add-event-chan "LeftBumperPressed" foot-chan)
+      (nao/add-event-chan "RightBumperPressed" foot-chan)
+      (nao/add-event-chan "ALBasicAwareness/HumanTracked" human-tracking-chan)
+      (nao/add-event-chan "ALBasicAwareness/HumanLost" human-tracking-chan)
+      (nao/add-event-chan "ALBasicAwareness/StimulusDetected" stimulus-chan)
+      (nao/add-event-chan "PostureFamilyChanged" posture-chan)
+      (nao/add-event-chan "DarknessDetection/DarknessDetected" darkness-chan)
+      (nao/add-event-chan "WordRecognized" word-recognised-chan)
+      (nao/add-event-chan "SpeechDetected" speech-detected-chan)
+      (nao/wake-up)
+      (nao/set-volume (Float. 1.0))
+      (nao/say "I'm starting to feel quite emotional")
       (head-touch-process head-chan percept-chan)
       (back-head-touch-process back-head-chan percept-chan)
       (hand-touch-process hand-chan percept-chan)
       (foot-touch-process foot-chan percept-chan)
-      (face-detected-process face-chan percept-chan)
-      (reset! robot-atom robot)
+      (human-tracking-process human-tracking-chan  percept-chan)
+      (stimulus-detected-process stimulus-chan percept-chan)
+      (posture-change-process posture-chan percept-chan)
+      (darkness-process darkness-chan percept-chan)
+      (word-recognised-process word-recognised-chan percept-chan)
+      (speech-detected-process speech-detected-chan percept-chan)
       )))
 
 (defn start-reactions
   [percept-chan]
   (do
     (add-state-listener internal-clients-atom
-                        (anger-management robot-atom percept-chan))
+                        (anger-management percept-chan))
     (add-state-listener internal-clients-atom
-                        (loneliness-management robot-atom percept-chan))
+                        (loneliness-management percept-chan))
     (add-state-listener internal-clients-atom
-                        (boredom-management robot-atom percept-chan))
+                        (boredom-management percept-chan))
     (add-state-listener internal-clients-atom
-                        (fear-management robot-atom percept-chan))
+                        (fear-management percept-chan))
     (add-state-listener internal-clients-atom
-                        (delight-management robot-atom percept-chan))))
+                        (delight-management percept-chan))))
 
 (defn start-emotions
   [percept-chan state-chan]
@@ -519,4 +723,6 @@
   (let [percept-chan (chan)
         state-chan (chan)]
     (start-robot hostname percept-chan state-chan)
-    (<!! (start-emotions percept-chan state-chan))))
+    (start-emotions percept-chan state-chan)
+    ;; TODO block on a channel forever to keep running, need a proper shutdown mechanism
+    (<!! (chan))))
