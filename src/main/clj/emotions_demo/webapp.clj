@@ -34,10 +34,11 @@
 (defn remote-state-emitter
   [state-chan clients-atom]
   (go-loop [state (<! state-chan)]
-           (when state
-             (doseq [[client-id client-chan] @clients-atom]
-               (>! client-chan (pr-str (serialise state))))
-             (recur (<! state-chan)))))
+    (when state
+      (let [msg (serialise state)]
+        (doseq [[client-id client-chan] @clients-atom]
+          (>! client-chan (pr-str msg)))
+        (recur (<! state-chan))))))
 
 (defn index-page []
   (html5

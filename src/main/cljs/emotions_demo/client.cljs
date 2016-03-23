@@ -7,7 +7,8 @@
    [chord.client :refer [ws-ch]]
    [om.core :as om :include-macros true]
    [om.dom :as dom :include-macros true]
-   [strokes :refer [d3]]))
+;   [strokes :refer [d3]]
+   ))
 
 (enable-console-print!)
 
@@ -72,9 +73,9 @@
 
 (defn bind-state [{:keys [ws] :as data}]
   (go-loop []
-    (when-let [{update :message} (<! ws)]
-      (prn update)
-      (om/transact! data :data #(make-new-state % (reader/read-string update)))
+    (when-let [{:keys [message]} (<! ws)]
+      (prn message)
+      (om/transact! data :data #(make-new-state % (reader/read-string message)))
       (recur))))
 
 (defn bar-view [{:keys [id name value] :as c} owner opts]
@@ -191,31 +192,31 @@
                                       {:key :id
                                        :opts {:width m-width-str}})))))))
 
-(defn history-view [{:keys [sv-history] :as c} owner opts]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/div #js {:className "history"}
-               (dom/svg #js {:className "chart"})))
-
-    om/IDidMount
-    (did-mount [_ _]
-      (let [rdata #js [4, 8, 15, 16, 23, 42]
-            svg (-> d3 (.select "svg")
-            (.attr {:width 600 :height 200}))
-            ]
-(-> svg (.append "circle")
-      (.attr {:cx 350 :cy 200 :r 200 :class "left"}))
-
-(-> svg (.append "circle")
-      (.attr {:cx 550 :cy 200 :r 200 :class "right"}))
-
-(-> svg (.append "circle")
-      (.attr {:cx 450 :cy 300 :r 200 :class "bottom"}))
-
-    )
-)
-))
+;(defn history-view [{:keys [sv-history] :as c} owner opts]
+;  (reify
+;    om/IRender
+;    (render [_]
+;      (dom/div #js {:className "history"}
+;               (dom/svg #js {:className "chart"})))
+;
+;    om/IDidMount
+;    (did-mount [_ _]
+;      (let [rdata #js [4, 8, 15, 16, 23, 42]
+;            svg (-> d3 (.select "svg")
+;            (.attr {:width 600 :height 200}))
+;            ]
+;(-> svg (.append "circle")
+;      (.attr {:cx 350 :cy 200 :r 200 :class "left"}))
+;
+;(-> svg (.append "circle")
+;      (.attr {:cx 550 :cy 200 :r 200 :class "right"}))
+;
+;(-> svg (.append "circle")
+;      (.attr {:cx 450 :cy 300 :r 200 :class "bottom"}))
+;
+;    )
+;)
+;))
 
 (defn short-term-item-view
   [{:keys [name other-agents locations stm-entry stm-expiration satisfaction-vector-obs learning-vector] :as c} owner opts]
@@ -358,22 +359,24 @@
                (dom/div #js {:className "separator"})
                (om/build long-term-memory-view (:data app))
                (dom/div #js {:className "separator"})
-               (om/build fake-face-recognition-view app)
+;               (om/build fake-face-recognition-view app)
 ;               (dom/div #js {:className "separator"})
 ;               (om/build history-view (:data app))
-               (dom/div #js {:className "separator"})
+;               (dom/div #js {:className "separator"})
                (om/build robot-connect-view app)
       ))))
 
-(strokes/bootstrap)
+;(strokes/bootstrap)
 
 (go
-  (let [ws (<! (ws-ch "ws://localhost:3000/ws"))
-        app-state (atom {:ws ws :data {:motivations [] :sv [] :va []
+  (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:3000/ws"))
+        app-state (atom {:ws ws-channel :data {:motivations [] :sv [] :va []
                                        :percepts []
                                        :sv-history {}
                                        :va-history {}
                                        :stm #{}
                                        :ltm #{}}})]
-    (om/root emotion-display-app app-state
-             {:target (.getElementById js/document "app")})))
+    (if-not error
+      (om/root emotion-display-app app-state
+               {:target (.getElementById js/document "app")})
+      (js/console.log "Error:" (pr-str error)))))

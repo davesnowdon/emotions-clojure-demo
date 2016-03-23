@@ -10,10 +10,10 @@
   :test-paths ["test" "src/test/clj"]
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [compojure "1.1.6"]
-                 [jarohen/chord "0.2.2"]
-                 [jarohen/nomad "0.6.3"]
-                 [ring/ring-core "1.2.1"]
+                 [compojure "1.5.0"]
+                 [jarohen/chord "0.7.0"]
+                 [jarohen/nomad "0.7.2"]
+                 [ring/ring-core "1.4.0"]
                  [javax.servlet/servlet-api "2.5"]
                  [org.clojure/core.async "0.2.374"]
                  [hiccup "1.0.5"]
@@ -21,15 +21,15 @@
                  ;[naojure "0.2.4"]
                  [com.aldebaran/java-naoqi "2.1.4"]
 
-                 [org.clojure/clojurescript "0.0-2156"]
-                 [org.clojure/tools.reader "0.8.3"]
-                 [prismatic/dommy "0.1.2"]
-                 [om "0.5.1"]
-		 [net.drib/strokes "0.5.1"]]
+                 [org.clojure/clojurescript "1.8.34"]
+                 [org.clojure/tools.reader "0.10.0"]
+                 [prismatic/dommy "1.1.0"]
+                 [om "0.7.3"]
+                 [net.drib/strokes "0.5.1"]]
 
   :plugins [[lein-pdo "0.1.1"]
-            [lein-cljsbuild "1.0.2"]
-            [jarohen/lein-frodo "0.2.11"]]
+            [lein-cljsbuild "1.1.3"]
+            [jarohen/lein-frodo "0.4.2"]]
 
   :frodo/config-resource "config/demo.edn"
 
