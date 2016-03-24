@@ -49,8 +49,8 @@
       (include-css "/css/demo.css")
       (include-js "/jslib/react/react-0.9.0.js") ; only required in dev build
       (include-js "/out/goog/base.js") ; only required in dev build
-      (include-js "/jslib/d3/d3.min.js")
-      (include-js "/jslib/cubism/cubism.v1.min.js")
+      (include-js "/jslib/d3/d3.v3.min.js")
+      (include-js "/jslib/dimple/dimple.v1.1.4.min.js")
       (include-js "/js/demo.js")
       (javascript-tag "goog.require('emotions_demo.client');") ; only required in dev build
       ]))

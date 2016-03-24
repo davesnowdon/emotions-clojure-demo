@@ -7,7 +7,6 @@
    [chord.client :refer [ws-ch]]
    [om.core :as om :include-macros true]
    [om.dom :as dom :include-macros true]
-;   [strokes :refer [d3]]
    ))
 
 (enable-console-print!)
@@ -54,8 +53,9 @@
     (map (fn [id] {:id id :name (mnames id) :value (sv id)}) ids)))
 
 (defn add-history [history new-state]
-  (reduce (fn [a k] (assoc a k (conj (k history []) (k new-state)))) {}
-          (keys new-state)))
+  (let [timestamp (js/Date.)]
+    (reduce (fn [h k] (conj h {:motivation k :timestamp timestamp :value (k new-state)}))
+            history (keys new-state))))
 
 (defn make-new-state
   [{:keys [ws sv-history va-history] :as old-state}
@@ -192,31 +192,40 @@
                                       {:key :id
                                        :opts {:width m-width-str}})))))))
 
-;(defn history-view [{:keys [sv-history] :as c} owner opts]
-;  (reify
-;    om/IRender
-;    (render [_]
-;      (dom/div #js {:className "history"}
-;               (dom/svg #js {:className "chart"})))
-;
-;    om/IDidMount
-;    (did-mount [_ _]
-;      (let [rdata #js [4, 8, 15, 16, 23, 42]
-;            svg (-> d3 (.select "svg")
-;            (.attr {:width 600 :height 200}))
-;            ]
-;(-> svg (.append "circle")
-;      (.attr {:cx 350 :cy 200 :r 200 :class "left"}))
-;
-;(-> svg (.append "circle")
-;      (.attr {:cx 550 :cy 200 :r 200 :class "right"}))
-;
-;(-> svg (.append "circle")
-;      (.attr {:cx 450 :cy 300 :r 200 :class "bottom"}))
-;
-;    )
-;)
-;))
+(defn history-view [{:keys [sv-history] :as c} owner opts]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div
+       (dom/h2 nil "Motivation history")
+       (dom/div #js {:id "chart" :width "100%" :height "400px"})))
+
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (let [n (.getElementById js/document "chart")]
+        (while (.hasChildNodes n)
+          (.removeChild n (.-lastChild n))))
+      (let [id           "chart"
+            width        "100%"
+            height       600
+            bounds       {:x "5%" :y "15%" :width "80%" :height "50%"}
+            x-axis       "timestamp"
+            y-axis       "value"
+            plot         js/dimple.plot.line
+            Chart        (.-chart js/dimple)
+            svg          (.newSvg js/dimple (str "#" id) width height)
+            data         sv-history
+            dimple-chart (.setBounds (Chart. svg) (:x bounds) (:y bounds) (:width bounds) (:height bounds))
+            x            (.addCategoryAxis dimple-chart "x" x-axis)
+            y            (.addMeasureAxis dimple-chart "y" y-axis)
+            s            (.addSeries dimple-chart "motivation" plot (clj->js [x y]))]
+        (aset s "data" (clj->js data))
+        (.addLegend dimple-chart "5%" "10%" "20%" "10%" "right")
+        (.draw dimple-chart)
+        (.attr (.selectAll (.-shapes x) "text") "transform" "rotate(45,0,12.6015625) translate(5, 0)")
+        )
+      )
+    ))
 
 (defn short-term-item-view
   [{:keys [name other-agents locations stm-entry stm-expiration satisfaction-vector-obs learning-vector] :as c} owner opts]
@@ -361,19 +370,18 @@
                (dom/div #js {:className "separator"})
 ;               (om/build fake-face-recognition-view app)
 ;               (dom/div #js {:className "separator"})
-;               (om/build history-view (:data app))
-;               (dom/div #js {:className "separator"})
+               (om/build history-view (:data app))
+               (dom/div #js {:className "separator"})
                (om/build robot-connect-view app)
       ))))
 
-;(strokes/bootstrap)
 
 (go
   (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:3000/ws"))
         app-state (atom {:ws ws-channel :data {:motivations [] :sv [] :va []
                                        :percepts []
-                                       :sv-history {}
-                                       :va-history {}
+                                       :sv-history []
+                                       :va-history []
                                        :stm #{}
                                        :ltm #{}}})]
     (if-not error

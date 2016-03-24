@@ -24,8 +24,7 @@
                  [org.clojure/clojurescript "1.8.34"]
                  [org.clojure/tools.reader "0.10.0"]
                  [prismatic/dommy "1.1.0"]
-                 [om "0.7.3"]
-                 [net.drib/strokes "0.5.1"]]
+                 [om "0.7.3"]]
 
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.1.3"]
